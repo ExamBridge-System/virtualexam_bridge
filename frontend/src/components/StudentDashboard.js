@@ -8,6 +8,12 @@ function StudentDashboard() {
   const navigate = useNavigate();
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
+  // State for potential error messages
+  const [error, setError] = useState(null); 
+  // Custom State for the Modal (to avoid using alert())
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalMessage, setModalMessage] = useState('');
 
   useEffect(() => {
     fetchExams();
@@ -19,6 +25,7 @@ function StudentDashboard() {
       setExams(response.data.exams);
     } catch (error) {
       console.error('Error fetching exams:', error);
+      setError('Failed to load exams. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -31,10 +38,16 @@ function StudentDashboard() {
       if (response.data.canAccess) {
         navigate(`/student/exam/${examId}`);
       } else {
-        alert(response.data.message || 'Exam is not currently available. Please check the scheduled time.');
+        // Use custom modal instead of alert()
+        setModalTitle('Access Denied');
+        setModalMessage(response.data.message || 'Exam is not currently available. Please check the scheduled time.');
+        setIsModalOpen(true);
       }
     } catch (error) {
-      alert(error.response?.data?.message || 'Cannot access exam');
+      // Use custom modal instead of alert()
+      setModalTitle('Error');
+      setModalMessage(error.response?.data?.message || 'Cannot access exam due to a server error.');
+      setIsModalOpen(true);
     }
   };
 
@@ -42,9 +55,68 @@ function StudentDashboard() {
     logout();
     navigate('/login');
   };
+  
+  // Helper to safely access questionsPerSet
+  const getQuestionCount = (exam) => {
+    // FIX: Use optional chaining and default to an empty object
+    const dist = exam.questionsPerSet || {}; 
+    const easy = dist.easy || 0;
+    const medium = dist.medium || 0;
+    const hard = dist.hard || 0;
+    
+    // The previous error occurred when accessing dist.easy directly if exam.questionsPerSet was undefined or null.
+    // By providing || {} and then || 0, we ensure no property of undefined is read.
+    return easy + medium + hard;
+  };
+
+  // Custom Modal Component (Inline for Single-File React)
+  const ErrorModal = ({ isOpen, title, message, onClose }) => {
+    if (!isOpen) return null;
+
+    return (
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          fontFamily: 'Inter, sans-serif'
+        }}
+      >
+        <div 
+          style={{
+            backgroundColor: 'white',
+            padding: '25px',
+            borderRadius: '10px',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+            maxWidth: '400px',
+            width: '90%',
+            textAlign: 'center'
+          }}
+        >
+          <h3 style={{ color: title === 'Access Denied' ? '#dc2626' : '#f59e0b', marginBottom: '15px' }}>{title}</h3>
+          <p style={{ color: '#4b5563', marginBottom: '25px' }}>{message}</p>
+          <button 
+            onClick={onClose} 
+            className="btn btn-primary"
+            style={{ width: '100%', backgroundColor: title === 'Access Denied' ? '#dc2626' : '#2563eb' }}
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    );
+  };
+
 
   return (
-    <div>
+    <div style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* Navbar */}
       <nav className="navbar">
         <h2>🎓 Student Portal</h2>
@@ -73,6 +145,9 @@ function StudentDashboard() {
             <p><strong>📧 Email:</strong> {user?.email}</p>
           </div>
         </div>
+        
+        {/* Global Error Message Display */}
+        {error && <div className="error">{error}</div>}
 
         {/* Available Exams Section */}
         <div className="card">
@@ -105,7 +180,8 @@ function StudentDashboard() {
                       <strong>⏱️ Duration:</strong> {exam.duration} minutes
                     </div>
                     <div>
-                      <strong>📊 Questions:</strong> {exam.questionsPerSet.easy + exam.questionsPerSet.medium + exam.questionsPerSet.hard} total
+                      {/* FIX: Use the safe accessor function here */}
+                      <strong>📊 Questions:</strong> {getQuestionCount(exam)} total
                     </div>
                   </div>
 
@@ -149,6 +225,14 @@ function StudentDashboard() {
           </ul>
         </div>
       </div>
+      
+      {/* Custom Error/Access Denied Modal */}
+      <ErrorModal
+        isOpen={isModalOpen}
+        title={modalTitle}
+        message={modalMessage}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
 }

@@ -30,11 +30,6 @@ const examSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  questionsPerSet: {
-    easy: { type: Number, default: 0 },
-    medium: { type: Number, default: 0 },
-    hard: { type: Number, default: 0 },
-  },
   status: {
     type: String,
     enum: ['scheduled', 'active', 'completed'],

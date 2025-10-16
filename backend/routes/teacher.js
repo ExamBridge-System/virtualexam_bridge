@@ -79,30 +79,6 @@ router.get('/exam/:examId/questions', authMiddleware, teacherAuth, async (req, r
   }
 });
 
-// Set question distribution for exam
-router.put('/exam/:examId/distribution', authMiddleware, teacherAuth, async (req, res) => {
-  try {
-    const { examId } = req.params;
-    const { easy, medium, hard } = req.body;
-
-    const exam = await Exam.findById(examId);
-    if (!exam) {
-      return res.status(404).json({ message: 'Exam not found' });
-    }
-
-    if (exam.teacherId.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized' });
-    }
-
-    exam.questionsPerSet = { easy, medium, hard };
-    await exam.save();
-
-    res.json({ message: 'Question distribution set successfully', exam });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
 // Get all exams by teacher
 router.get('/exams', authMiddleware, teacherAuth, async (req, res) => {
   try {
