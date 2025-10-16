@@ -10,11 +10,8 @@ function AddQuestions() {
     questionText: '',
     level: 'easy',
   });
-  const [distribution, setDistribution] = useState({
-    easy: 0,
-    medium: 0,
-    hard: 0,
-  });
+  // Removed distribution state and related handlers
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -39,13 +36,6 @@ function AddQuestions() {
     });
   };
 
-  const handleDistributionChange = (e) => {
-    setDistribution({
-      ...distribution,
-      [e.target.name]: parseInt(e.target.value) || 0,
-    });
-  };
-
   const handleAddQuestion = async (e) => {
     e.preventDefault();
     setError('');
@@ -65,18 +55,7 @@ function AddQuestions() {
     }
   };
 
-  const handleSetDistribution = async () => {
-    setError('');
-    setSuccess('');
-
-    try {
-      await api.put(`/teacher/exam/${examId}/distribution`, distribution);
-      setSuccess('Question distribution set successfully!');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to set distribution');
-    }
-  };
+  // Removed handleSetDistribution function
 
   const getQuestionCountByLevel = (level) => {
     return questions.filter(q => q.level === level).length;
@@ -92,7 +71,10 @@ function AddQuestions() {
       </nav>
 
       <div className="container">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        {/* Changed gridTemplateColumns to '1fr' to make it a single column layout */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+          
+          {/* Add New Question Card (now spans full width) */}
           <div className="card">
             <h3 style={{ marginBottom: '20px' }}>Add New Question</h3>
             <form onSubmit={handleAddQuestion}>
@@ -134,69 +116,24 @@ function AddQuestions() {
                 {loading ? 'Adding...' : 'Add Question'}
               </button>
             </form>
+
+            {/* Question Statistics integrated here */}
+            <div style={{ marginTop: '20px', background: '#f7fafc', padding: '15px', borderRadius: '8px' }}>
+              <h4>Question Statistics</h4>
+              <p>Easy: {getQuestionCountByLevel('easy')}</p>
+              <p>Medium: {getQuestionCountByLevel('medium')}</p>
+              <p>Hard: {getQuestionCountByLevel('hard')}</p>
+              <p><strong>Total: {questions.length}</strong></p>
+              <p style={{ color: '#718096', marginTop: '10px', fontSize: '0.9em' }}>
+                Questions will be randomly distributed to students during the exam.
+              </p>
+            </div>
           </div>
-
-          <div className="card">
-            <h3 style={{ marginBottom: '20px' }}>Set Question Distribution</h3>
-            <p style={{ color: '#718096', marginBottom: '20px' }}>
-              Define how many questions of each level should appear in each student's set
-            </p>
-
-            <div className="form-group">
-              <label>Easy Questions per Set (Available: {getQuestionCountByLevel('easy')})</label>
-              <input
-                type="number"
-                name="easy"
-                value={distribution.easy}
-                onChange={handleDistributionChange}
-                min="0"
-                max={getQuestionCountByLevel('easy')}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Medium Questions per Set (Available: {getQuestionCountByLevel('medium')})</label>
-              <input
-                type="number"
-                name="medium"
-                value={distribution.medium}
-                onChange={handleDistributionChange}
-                min="0"
-                max={getQuestionCountByLevel('medium')}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Hard Questions per Set (Available: {getQuestionCountByLevel('hard')})</label>
-              <input
-                type="number"
-                name="hard"
-                value={distribution.hard}
-                onChange={handleDistributionChange}
-                min="0"
-                max={getQuestionCountByLevel('hard')}
-              />
-            </div>
-
-            <div style={{ 
-              background: '#f7fafc', 
-              padding: '15px', 
-              borderRadius: '8px', 
-              marginTop: '15px' 
-            }}>
-              <strong>Total Questions per Set: {distribution.easy + distribution.medium + distribution.hard}</strong>
-            </div>
-
-            <button
-              onClick={handleSetDistribution}
-              className="btn btn-primary"
-              style={{ width: '100%', marginTop: '15px' }}
-            >
-              Set Distribution
-            </button>
-          </div>
+          
+          {/* The second card (Set Distribution) has been removed */}
         </div>
 
+        {/* All Questions Card */}
         <div className="card">
           <h3 style={{ marginBottom: '20px' }}>All Questions ({questions.length})</h3>
           

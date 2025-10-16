@@ -12,7 +12,6 @@ function TakeExam() {
   const [setGenerated, setSetGenerated] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadedScreenshots, setUploadedScreenshots] = useState([]);
-  const [removing, setRemoving] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -106,25 +105,6 @@ function TakeExam() {
       setError(err.response?.data?.message || 'Failed to upload screenshot');
     } finally {
       setUploading(false);
-    }
-  };
-
-  const handleRemoveScreenshot = async (filename) => {
-    const confirmRemove = window.confirm('Are you sure you want to remove this screenshot?');
-    if (!confirmRemove) return;
-
-    setError('');
-    setRemoving(filename);
-
-    try {
-      await api.delete(`/student/exam/${examId}/screenshot/${filename}`);
-      setUploadedScreenshots(uploadedScreenshots.filter(s => s !== filename));
-      setSuccess('Screenshot removed successfully!');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to remove screenshot');
-    } finally {
-      setRemoving(null);
     }
   };
 
@@ -247,7 +227,7 @@ function TakeExam() {
             <div className="card">
               <h3 style={{ marginBottom: '20px' }}>Upload Answer Screenshots</h3>
               <p style={{ color: '#718096', marginBottom: '20px' }}>
-                Take clear screenshots, and upload them here.
+                Write your answers on paper, take clear screenshots, and upload them here.
               </p>
 
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '20px' }}>
@@ -285,32 +265,8 @@ function TakeExam() {
                           borderRadius: '8px',
                           background: '#f0fff4',
                           textAlign: 'center',
-                          position: 'relative',
                         }}
                       >
-                        <button
-                          onClick={() => handleRemoveScreenshot(filename)}
-                          disabled={removing === filename}
-                          style={{
-                            position: 'absolute',
-                            top: '5px',
-                            right: '5px',
-                            background: '#e53e3e',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '50%',
-                            width: '25px',
-                            height: '25px',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                          title="Remove screenshot"
-                        >
-                          {removing === filename ? '...' : '×'}
-                        </button>
                         <div style={{ marginBottom: '10px', fontSize: '24px' }}>✓</div>
                         <p style={{ fontSize: '14px', color: '#2d3748', wordBreak: 'break-all' }}>
                           {filename}
