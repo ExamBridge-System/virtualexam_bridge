@@ -38,19 +38,18 @@ const shuffleArray = (array) => {
 
 // Get available exams for student's class
 router.get('/exams', authMiddleware, studentAuth, async (req, res) => {
-  try {
-    const Student = require('../models/Student');
-    const student = await Student.findById(req.user.id);
-    
-    const exams = await Exam.find({ 
-      class: student.class,
-      status: { $in: ['scheduled', 'active'] }
-    }).sort({ scheduledDate: -1 });
+  try {
+    const Student = require('../models/Student');
+    const student = await Student.findById(req.user.id);
 
-    res.json({ exams });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
+    const exams = await Exam.find({
+      class: student.class
+    }).sort({ scheduledDate: -1 });
+
+    res.json({ exams });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
 });
 
 // Check if student can access exam
@@ -219,50 +218,57 @@ router.get('/exam/:examId/questions', authMiddleware, studentAuth, async (req, r
   }
 });
 
-// Upload screenshot
-router.post('/exam/:examId/upload', authMiddleware, studentAuth, upload.single('screenshot'), async (req, res) => {
-  try {
-    const { examId } = req.params;
+// Upload screenshot for a specific question
+router.post('/exam/:examId/question/:questionId/upload', authMiddleware, studentAuth, upload.single('screenshot'), async (req, res) => {
+  try {
+    const { examId, questionId } = req.params;
 
-    if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
-    }
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
 
-    const studentExam = await StudentExam.findOne({
-      studentId: req.user.id,
-      examId: examId,
-    });
+    const studentExam = await StudentExam.findOne({
+      studentId: req.user.id,
+      examId: examId,
+    });
 
-    if (!studentExam) {
-      return res.status(404).json({ message: 'Exam not started' });
-    }
-    
+    if (!studentExam) {
+      return res.status(404).json({ message: 'Exam not started' });
+    }
+
+    // Check if question is assigned to this student
+    const questionAssigned = studentExam.assignedQuestions.some(q => q.questionId.toString() === questionId);
+    if (!questionAssigned) {
+      return res.status(403).json({ message: 'Question not assigned to you' });
+    }
+
     // Ensure studentExam.screenshots is an array before pushing
     if (!studentExam.screenshots) {
         studentExam.screenshots = [];
     }
 
-    studentExam.screenshots.push({
-      filename: req.file.filename,
-      path: req.file.path,
-    });
+    studentExam.screenshots.push({
+      questionId: questionId,
+      filename: req.file.filename,
+      path: req.file.path,
+    });
 
-    await studentExam.save();
+    await studentExam.save();
 
-    res.json({ 
-      message: 'Screenshot uploaded successfully',
-      filename: req.file.filename 
-    });
-  } catch (error) {
-    console.error('Error uploading screenshot:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
+    res.json({
+      message: 'Screenshot uploaded successfully',
+      filename: req.file.filename
+    });
+  } catch (error) {
+    console.error('Error uploading screenshot:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
 });
 
-// Delete screenshot
-router.delete('/exam/:examId/screenshot/:filename', authMiddleware, studentAuth, async (req, res) => {
+// Delete screenshot for a specific question
+router.delete('/exam/:examId/question/:questionId/screenshot/:filename', authMiddleware, studentAuth, async (req, res) => {
     try {
-        const { examId, filename } = req.params;
+        const { examId, questionId, filename } = req.params;
 
         const studentExam = await StudentExam.findOne({
             studentId: req.user.id,
@@ -273,10 +279,10 @@ router.delete('/exam/:examId/screenshot/:filename', authMiddleware, studentAuth,
             return res.status(404).json({ message: 'Exam not started' });
         }
 
-        const screenshotIndex = studentExam.screenshots.findIndex(s => s.filename === filename);
-        
+        const screenshotIndex = studentExam.screenshots.findIndex(s => s.filename === filename && s.questionId.toString() === questionId);
+
         if (screenshotIndex === -1) {
-            return res.status(404).json({ message: 'Screenshot not found' });
+            return res.status(404).json({ message: 'Screenshot not found for this question' });
         }
 
         // Remove the file from the filesystem first (optional, but good practice)
@@ -339,13 +345,22 @@ router.get('/exam/:examId/status', authMiddleware, studentAuth, async (req, res)
     });
 
     if (!studentExam) {
-      return res.json({ status: 'not_started', setGenerated: false, uploadedScreenshots: [] });
+      return res.json({ status: 'not_started', setGenerated: false, uploadedScreenshots: {} });
     }
 
-    // Return the list of filenames for the frontend to display
-    const uploadedScreenshots = studentExam.screenshots.map(s => s.filename);
+    // Group screenshots by questionId
+    const uploadedScreenshots = {};
+    studentExam.screenshots.forEach(screenshot => {
+      if (screenshot.questionId) {
+        const qId = screenshot.questionId.toString();
+        if (!uploadedScreenshots[qId]) {
+          uploadedScreenshots[qId] = [];
+        }
+        uploadedScreenshots[qId].push(screenshot.filename);
+      }
+    });
 
-    res.json({ 
+    res.json({
       status: studentExam.status,
       setGenerated: studentExam.setGenerated,
       uploadedScreenshots: uploadedScreenshots,

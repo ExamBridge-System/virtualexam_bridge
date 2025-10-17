@@ -20,6 +20,11 @@ const studentExamSchema = new mongoose.Schema({
     level: String,
   }],
   screenshots: [{
+    questionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Question',
+      required: true,
+    },
     filename: String,
     path: String,
     uploadedAt: {

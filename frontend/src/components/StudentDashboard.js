@@ -7,9 +7,10 @@ function StudentDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [exams, setExams] = useState([]);
+  const [examStatuses, setExamStatuses] = useState({});
   const [loading, setLoading] = useState(true);
   // State for potential error messages
-  const [error, setError] = useState(null); 
+  const [error, setError] = useState(null);
   // Custom State for the Modal (to avoid using alert())
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
@@ -23,6 +24,19 @@ function StudentDashboard() {
     try {
       const response = await api.get('/student/exams');
       setExams(response.data.exams);
+
+      // Fetch status for each exam
+      const statuses = {};
+      for (const exam of response.data.exams) {
+        try {
+          const statusResponse = await api.get(`/student/exam/${exam._id}/status`);
+          statuses[exam._id] = statusResponse.data;
+        } catch (statusError) {
+          // If status fetch fails, assume not started
+          statuses[exam._id] = { status: 'not_started', setGenerated: false, uploadedScreenshots: {} };
+        }
+      }
+      setExamStatuses(statuses);
     } catch (error) {
       console.error('Error fetching exams:', error);
       setError('Failed to load exams. Please try again later.');
@@ -36,6 +50,19 @@ function StudentDashboard() {
       const response = await api.get(`/student/exam/${examId}/access`);
 
       if (response.data.canAccess) {
+        // Check if student has already submitted this exam
+        try {
+          const statusResponse = await api.get(`/student/exam/${examId}/status`);
+          if (statusResponse.data.status === 'submitted') {
+            setModalTitle('Exam Already Submitted');
+            setModalMessage('You have already submitted this exam and cannot access it again.');
+            setIsModalOpen(true);
+            return;
+          }
+        } catch (statusError) {
+          // If status check fails, continue to exam (might be first time)
+        }
+
         navigate(`/student/exam/${examId}`);
       } else {
         // Use custom modal instead of alert()
@@ -59,14 +86,23 @@ function StudentDashboard() {
   // Helper to safely access questionsPerSet
   const getQuestionCount = (exam) => {
     // FIX: Use optional chaining and default to an empty object
-    const dist = exam.questionsPerSet || {}; 
+    const dist = exam.questionsPerSet || {};
     const easy = dist.easy || 0;
     const medium = dist.medium || 0;
     const hard = dist.hard || 0;
-    
+
     // The previous error occurred when accessing dist.easy directly if exam.questionsPerSet was undefined or null.
     // By providing || {} and then || 0, we ensure no property of undefined is read.
     return easy + medium + hard;
+  };
+
+  // Helper to check if exam is currently active based on time
+  const isExamActive = (exam) => {
+    const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
+    const currentTime = new Date();
+    const examEndTime = new Date(examStartTime.getTime() + exam.duration * 60000);
+
+    return currentTime >= examStartTime && currentTime <= examEndTime;
   };
 
   // Custom Modal Component (Inline for Single-File React)
@@ -150,67 +186,225 @@ function StudentDashboard() {
         {error && <div className="error">{error}</div>}
 
         {/* Available Exams Section */}
-        <div className="card">
-          <div style={{ marginBottom: '25px' }}>
-            <h2>Available Exams</h2>
-            <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '5px' }}>
-              {loading ? 'Loading...' : `${exams.length} exam(s) available for your class`}
-            </p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+          {/* Active Exams Panel */}
+          <div className="card">
+            <div style={{ marginBottom: '25px' }}>
+              <h2>🟢 Active Exams</h2>
+              <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '5px' }}>
+                Currently available exams
+              </p>
+            </div>
+
+            {loading ? (
+              <div className="loading">⏳ Loading exams...</div>
+            ) : exams.filter(exam => isExamActive(exam)).length > 0 ? (
+              <div className="grid">
+                {exams.filter(exam => isExamActive(exam)).map((exam) => (
+                  <div key={exam._id} className="exam-card" style={{ border: '2px solid #10b981' }}>
+                    <h3>📝 {exam.examName}</h3>
+
+                    <div className="exam-card-info">
+                      <div>
+                        <strong>📖 Class:</strong> {exam.class}
+                      </div>
+                      <div>
+                        <strong>📅 Date:</strong> {new Date(exam.scheduledDate).toLocaleDateString()}
+                      </div>
+                      <div>
+                        <strong>🕐 Time:</strong> {exam.scheduledTime}
+                      </div>
+                      <div>
+                        <strong>⏱️ Duration:</strong> {exam.duration} minutes
+                      </div>
+                      <div>
+                        <strong>📊 Questions:</strong> {getQuestionCount(exam)} total
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => checkExamAccess(exam._id)}
+                      className="btn btn-primary"
+                      style={{ width: '100%', background: '#10b981' }}
+                    >
+                      🚀 Enter Exam
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                background: '#f0fdf4',
+                borderRadius: '8px',
+                border: '2px dashed #bbf7d0'
+              }}>
+                <p style={{ fontSize: '16px', color: '#6b7280' }}>
+                  📭 No active exams at the moment
+                </p>
+                <p style={{ fontSize: '14px', color: '#9ca3af', marginTop: '10px' }}>
+                  Check back during exam time
+                </p>
+              </div>
+            )}
           </div>
 
-          {loading ? (
-            <div className="loading">⏳ Loading exams...</div>
-          ) : exams.length > 0 ? (
-            <div className="grid">
-              {exams.map((exam) => (
-                <div key={exam._id} className="exam-card">
-                  <h3>📝 {exam.examName}</h3>
-                  
-                  <div className="exam-card-info">
-                    <div>
-                      <strong>📖 Class:</strong> {exam.class}
+          {/* Completed Exams Panel */}
+          <div className="card">
+            <div style={{ marginBottom: '25px' }}>
+              <h2>✅ Completed Exams</h2>
+              <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '5px' }}>
+                Exams you have submitted
+              </p>
+            </div>
+
+            {loading ? (
+              <div className="loading">⏳ Loading exams...</div>
+            ) : exams.filter(exam => examStatuses[exam._id]?.status === 'submitted').length > 0 ? (
+              <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                {exams.filter(exam => examStatuses[exam._id]?.status === 'submitted').map((exam) => (
+                  <div
+                    key={exam._id}
+                    style={{
+                      padding: '15px',
+                      marginBottom: '10px',
+                      border: '2px solid #10b981',
+                      borderRadius: '8px',
+                      background: '#f0fdf4',
+                      cursor: 'default',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <strong>📝 {exam.examName}</strong>
+                      <span
+                        style={{
+                          padding: '4px 12px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          background: '#d1fae5',
+                          color: '#065f46',
+                        }}
+                      >
+                        Submitted
+                      </span>
                     </div>
-                    <div>
-                      <strong>📅 Date:</strong> {new Date(exam.scheduledDate).toLocaleDateString()}
-                    </div>
-                    <div>
-                      <strong>🕐 Time:</strong> {exam.scheduledTime}
-                    </div>
-                    <div>
-                      <strong>⏱️ Duration:</strong> {exam.duration} minutes
-                    </div>
-                    <div>
-                      {/* FIX: Use the safe accessor function here */}
-                      <strong>📊 Questions:</strong> {getQuestionCount(exam)} total
+                    <div style={{ fontSize: '14px', color: '#718096' }}>
+                      <div>📖 Class: {exam.class}</div>
+                      <div>📅 Date: {new Date(exam.scheduledDate).toLocaleDateString()}</div>
+                      <div>🕐 Time: {exam.scheduledTime} ({exam.duration} min)</div>
+                      <div>📊 Questions: {getQuestionCount(exam)} total</div>
+                      <div>📸 Screenshots: {Object.keys(examStatuses[exam._id]?.uploadedScreenshots || {}).length} questions</div>
                     </div>
                   </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                background: '#f9fafb',
+                borderRadius: '8px',
+                border: '2px dashed #e5e7eb'
+              }}>
+                <p style={{ fontSize: '16px', color: '#6b7280' }}>
+                  📭 No completed exams yet
+                </p>
+                <p style={{ fontSize: '14px', color: '#9ca3af', marginTop: '10px' }}>
+                  Complete exams to see them here
+                </p>
+              </div>
+            )}
+          </div>
 
-                  <button
-                    onClick={() => checkExamAccess(exam._id)}
-                    className="btn btn-primary"
-                    style={{ width: '100%' }}
-                  >
-                    🚀 Enter Exam
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '60px 20px',
-              background: '#f9fafb',
-              borderRadius: '8px',
-              border: '2px dashed #e5e7eb'
-            }}>
-              <p style={{ fontSize: '18px', color: '#6b7280' }}>
-                📭 No exams scheduled for your class at the moment
-              </p>
-              <p style={{ fontSize: '14px', color: '#9ca3af', marginTop: '10px' }}>
-                Please check back later or contact your instructor
+          {/* All Exams Panel */}
+          <div className="card">
+            <div style={{ marginBottom: '25px' }}>
+              <h2>📋 All Exams</h2>
+              <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '5px' }}>
+                {loading ? 'Loading...' : `${exams.length} exam(s) scheduled for your class`}
               </p>
             </div>
-          )}
+
+            {loading ? (
+              <div className="loading">⏳ Loading exams...</div>
+            ) : exams.length > 0 ? (
+              <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                {exams.map((exam) => {
+                  const status = examStatuses[exam._id]?.status || 'not_started';
+                  const isActive = isExamActive(exam);
+                  const isSubmitted = status === 'submitted';
+
+                  return (
+                    <div
+                      key={exam._id}
+                      style={{
+                        padding: '15px',
+                        marginBottom: '10px',
+                        border: isActive ? '2px solid #10b981' : '2px solid #e2e8f0',
+                        borderRadius: '8px',
+                        background: isActive ? '#f0fdf4' : isSubmitted ? '#fefce8' : 'white',
+                        cursor: isActive ? 'pointer' : 'default',
+                        transition: 'all 0.2s',
+                      }}
+                      onClick={() => isActive && checkExamAccess(exam._id)}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <strong>📝 {exam.examName}</strong>
+                        <span
+                          style={{
+                            padding: '4px 12px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            background: isActive ? '#d1fae5' : isSubmitted ? '#fef3c7' : '#e2e8f0',
+                            color: isActive ? '#065f46' : isSubmitted ? '#92400e' : '#2d3748',
+                          }}
+                        >
+                          {isSubmitted ? 'Submitted' : exam.status.replace('_', ' ')}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#718096' }}>
+                        <div>📖 Class: {exam.class}</div>
+                        <div>📅 Date: {new Date(exam.scheduledDate).toLocaleDateString()}</div>
+                        <div>🕐 Time: {exam.scheduledTime} ({exam.duration} min)</div>
+                        <div>📊 Questions: {getQuestionCount(exam)} total</div>
+                        {isSubmitted && (
+                          <div>📸 Screenshots: {Object.keys(examStatuses[exam._id]?.uploadedScreenshots || {}).length} questions</div>
+                        )}
+                      </div>
+                      {isActive && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            checkExamAccess(exam._id);
+                          }}
+                          className="btn btn-primary"
+                          style={{ width: '100%', marginTop: '10px', background: '#10b981' }}
+                        >
+                          🚀 Enter Exam
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                background: '#f9fafb',
+                borderRadius: '8px',
+                border: '2px dashed #e5e7eb'
+              }}>
+                <p style={{ fontSize: '16px', color: '#6b7280' }}>
+                  📭 No exams scheduled for your class at the moment
+                </p>
+                <p style={{ fontSize: '14px', color: '#9ca3af', marginTop: '10px' }}>
+                  Please check back later or contact your instructor
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Info Banner */}

@@ -158,96 +158,107 @@ function ViewStudentSubmissions() {
                 </div>
 
                 <h4 style={{ marginBottom: '15px' }}>Assigned Questions</h4>
-                {selectedSubmission.assignedQuestions?.map((q, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      padding: '15px',
-                      marginBottom: '15px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                      <strong>Question {index + 1}</strong>
-                      <span
-                        style={{
-                          padding: '4px 12px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          background:
-                            q.level === 'easy'
-                              ? '#d1fae5'
-                              : q.level === 'medium'
-                              ? '#fef3c7'
-                              : '#fecaca',
-                          color:
-                            q.level === 'easy'
-                              ? '#065f46'
-                              : q.level === 'medium'
-                              ? '#92400e'
-                              : '#991b1b',
-                        }}
-                      >
-                        {q.level}
-                      </span>
-                    </div>
-                    <p>{q.questionText}</p>
-                  </div>
-                ))}
+                {selectedSubmission.assignedQuestions?.map((q, index) => {
+                  // Group screenshots by questionId
+                  const questionScreenshots = selectedSubmission.screenshots?.filter(
+                    screenshot => screenshot.questionId._id.toString() === q.questionId._id.toString()
+                  ) || [];
 
-                <h4 style={{ marginTop: '30px', marginBottom: '15px' }}>
-                  Uploaded Screenshots ({selectedSubmission.screenshots?.length || 0})
-                </h4>
-                {selectedSubmission.screenshots && selectedSubmission.screenshots.length > 0 ? (
-                  <div className="grid">
-                    {selectedSubmission.screenshots.map((screenshot, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          padding: '15px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '8px',
-                          textAlign: 'center',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s',
-                        }}
-                        onClick={() => setFullScreenImage({
-                          url: `${BACKEND_URL}/uploads/screenshots/${screenshot.filename}`,
-                          filename: screenshot.filename,
-                          uploadedAt: screenshot.uploadedAt,
-                          index: index + 1
-                        })}
-                        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-                        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                      >
-                        <img
-                          src={`${BACKEND_URL}/uploads/screenshots/${screenshot.filename}`}
-                          alt={`Screenshot ${index + 1}`}
+                  return (
+                    <div
+                      key={index}
+                      style={{
+                        padding: '15px',
+                        marginBottom: '15px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                        <strong>Question {index + 1}</strong>
+                        <span
                           style={{
-                            maxWidth: '100%',
-                            maxHeight: '300px',
-                            borderRadius: '8px',
-                            marginBottom: '10px',
+                            padding: '4px 12px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            background:
+                              q.level === 'easy'
+                                ? '#d1fae5'
+                                : q.level === 'medium'
+                                ? '#fef3c7'
+                                : '#fecaca',
+                            color:
+                              q.level === 'easy'
+                                ? '#065f46'
+                                : q.level === 'medium'
+                                ? '#92400e'
+                                : '#991b1b',
                           }}
-                        />
-                        <p style={{ fontSize: '12px', color: '#718096' }}>
-                          {screenshot.filename}
-                        </p>
-                        <p style={{ fontSize: '11px', color: '#718096' }}>
-                          {new Date(screenshot.uploadedAt).toLocaleString()}
-                        </p>
-                        <p style={{ fontSize: '11px', color: '#667eea', marginTop: '5px' }}>
-                          Click to view full size
-                        </p>
+                        >
+                          {q.level}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p style={{ textAlign: 'center', color: '#718096', padding: '20px' }}>
-                    No screenshots uploaded yet
-                  </p>
-                )}
+                      <p>{q.questionText}</p>
+
+                      {/* Screenshots for this question */}
+                      <div style={{ marginTop: '15px' }}>
+                        <h5 style={{ marginBottom: '10px', color: '#4a5568' }}>
+                          Screenshots ({questionScreenshots.length})
+                        </h5>
+                        {questionScreenshots.length > 0 ? (
+                          <div className="grid">
+                            {questionScreenshots.map((screenshot, sIndex) => (
+                              <div
+                                key={sIndex}
+                                style={{
+                                  padding: '15px',
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '8px',
+                                  textAlign: 'center',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.3s',
+                                }}
+                                onClick={() => setFullScreenImage({
+                                  url: `${BACKEND_URL}/uploads/screenshots/${screenshot.filename}`,
+                                  filename: screenshot.filename,
+                                  uploadedAt: screenshot.uploadedAt,
+                                  index: sIndex + 1,
+                                  questionIndex: index + 1
+                                })}
+                                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                              >
+                                <img
+                                  src={`${BACKEND_URL}/uploads/screenshots/${screenshot.filename}`}
+                                  alt={`Screenshot ${sIndex + 1} for Question ${index + 1}`}
+                                  style={{
+                                    maxWidth: '100%',
+                                    maxHeight: '200px',
+                                    borderRadius: '8px',
+                                    marginBottom: '10px',
+                                  }}
+                                />
+                                <p style={{ fontSize: '12px', color: '#718096' }}>
+                                  {screenshot.filename}
+                                </p>
+                                <p style={{ fontSize: '11px', color: '#718096' }}>
+                                  {new Date(screenshot.uploadedAt).toLocaleString()}
+                                </p>
+                                <p style={{ fontSize: '11px', color: '#667eea', marginTop: '5px' }}>
+                                  Click to view full size
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p style={{ textAlign: 'center', color: '#a0aec0', padding: '10px', fontSize: '14px' }}>
+                            No screenshots uploaded for this question
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -324,7 +335,7 @@ function ViewStudentSubmissions() {
             }}
           >
             <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>
-              Screenshot {fullScreenImage.index}
+              Screenshot {fullScreenImage.index} for Question {fullScreenImage.questionIndex}
             </p>
             <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666' }}>
               {fullScreenImage.filename}

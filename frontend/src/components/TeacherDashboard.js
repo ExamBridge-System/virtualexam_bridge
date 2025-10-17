@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 
 function TeacherDashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,8 +63,22 @@ function TeacherDashboard() {
     <div className="container">
       {/* Hero Section */}
       <div className="dashboard-hero">
-        <h1>👋 Welcome back, {user?.name}!</h1>
-        <p>Manage your exams, questions, and view student submissions</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1>👋 Welcome back, {user?.name}!</h1>
+            <p>Manage your exams, questions, and view student submissions</p>
+          </div>
+          <button
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
+            className="btn btn-danger"
+            style={{ padding: '10px 20px', fontSize: '14px' }}
+          >
+            🚪 Logout
+          </button>
+        </div>
       </div>
 
       {/* Classes Section */}

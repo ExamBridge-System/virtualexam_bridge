@@ -10,8 +10,8 @@ function TakeExam() {
   const [exam, setExam] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [setGenerated, setSetGenerated] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [uploadedScreenshots, setUploadedScreenshots] = useState([]);
+  const [selectedFiles, setSelectedFiles] = useState({});
+  const [uploadedScreenshots, setUploadedScreenshots] = useState({});
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -73,11 +73,16 @@ function TakeExam() {
     }
   };
 
-  const handleFileSelect = (e) => {
-    setSelectedFile(e.target.files[0]);
+  const handleFileSelect = (questionId, e) => {
+    const file = e.target.files[0];
+    setSelectedFiles(prev => ({
+      ...prev,
+      [questionId]: file
+    }));
   };
 
-  const handleUploadScreenshot = async () => {
+  const handleUploadScreenshot = async (questionId) => {
+    const selectedFile = selectedFiles[questionId];
     if (!selectedFile) {
       setError('Please select a file first');
       return;
@@ -90,16 +95,24 @@ function TakeExam() {
     formData.append('screenshot', selectedFile);
 
     try {
-      const response = await api.post(`/student/exam/${examId}/upload`, formData, {
+      const response = await api.post(`/student/exam/${examId}/question/${questionId}/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-      
-      setUploadedScreenshots([...uploadedScreenshots, response.data.filename]);
+
+      setUploadedScreenshots(prev => ({
+        ...prev,
+        [questionId]: [...(prev[questionId] || []), response.data.filename]
+      }));
       setSuccess('Screenshot uploaded successfully!');
-      setSelectedFile(null);
-      document.getElementById('fileInput').value = '';
+      setSelectedFiles(prev => ({
+        ...prev,
+        [questionId]: null
+      }));
+      // Clear the file input
+      const fileInput = document.getElementById(`fileInput-${questionId}`);
+      if (fileInput) fileInput.value = '';
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to upload screenshot');
@@ -108,14 +121,32 @@ function TakeExam() {
     }
   };
 
+  const handleDeleteScreenshot = async (questionId, filename) => {
+    if (!window.confirm('Are you sure you want to delete this screenshot?')) return;
+
+    try {
+      await api.delete(`/student/exam/${examId}/question/${questionId}/screenshot/${filename}`);
+      setUploadedScreenshots(prev => ({
+        ...prev,
+        [questionId]: prev[questionId].filter(f => f !== filename)
+      }));
+      setSuccess('Screenshot deleted successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete screenshot');
+    }
+  };
+
   const handleSubmitExam = async () => {
-    if (uploadedScreenshots.length === 0) {
+    // Check if at least one screenshot is uploaded across all questions
+    const totalScreenshots = Object.values(uploadedScreenshots).reduce((total, screenshots) => total + screenshots.length, 0);
+    if (totalScreenshots === 0) {
       setError('Please upload at least one screenshot before submitting');
       return;
     }
 
     const confirmSubmit = window.confirm('Are you sure you want to submit the exam? You cannot make changes after submission.');
-    
+
     if (!confirmSubmit) return;
 
     setError('');
@@ -181,7 +212,7 @@ function TakeExam() {
           <>
             <div className="card">
               <h3 style={{ marginBottom: '20px' }}>Your Questions</h3>
-              
+
               {questions.map((q, index) => (
                 <div
                   key={index}
@@ -219,63 +250,82 @@ function TakeExam() {
                       {q.level}
                     </span>
                   </div>
-                  <p style={{ fontSize: '16px', lineHeight: '1.6' }}>{q.questionText}</p>
-                </div>
-              ))}
-            </div>
+                  <p style={{ fontSize: '16px', lineHeight: '1.6', marginBottom: '20px' }}>{q.questionText}</p>
 
-            <div className="card">
-              <h3 style={{ marginBottom: '20px' }}>Upload Answer Screenshots</h3>
-              <p style={{ color: '#718096', marginBottom: '20px' }}>
-                Write your answers on paper, take clear screenshots, and upload them here.
-              </p>
+                  {/* Upload section for this question */}
+                  <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
+                    <h4 style={{ marginBottom: '15px', color: '#4a5568' }}>Upload Answer Screenshots</h4>
 
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '20px' }}>
-                <input
-                  id="fileInput"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                  style={{ flex: 1 }}
-                />
-                <button
-                  onClick={handleUploadScreenshot}
-                  className="btn btn-secondary"
-                  disabled={uploading || !selectedFile}
-                >
-                  {uploading ? 'Uploading...' : 'Upload'}
-                </button>
-              </div>
-
-              {error && <div className="error">{error}</div>}
-              {success && <div className="success">{success}</div>}
-
-              {uploadedScreenshots.length > 0 && (
-                <div style={{ marginTop: '30px' }}>
-                  <h4 style={{ marginBottom: '15px' }}>
-                    Uploaded Screenshots ({uploadedScreenshots.length})
-                  </h4>
-                  <div className="grid">
-                    {uploadedScreenshots.map((filename, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          padding: '15px',
-                          border: '2px solid #48bb78',
-                          borderRadius: '8px',
-                          background: '#f0fff4',
-                          textAlign: 'center',
-                        }}
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '15px' }}>
+                      <input
+                        id={`fileInput-${q.questionId}`}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileSelect(q.questionId, e)}
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        onClick={() => handleUploadScreenshot(q.questionId)}
+                        className="btn btn-secondary"
+                        disabled={uploading || !selectedFiles[q.questionId]}
                       >
-                        <div style={{ marginBottom: '10px', fontSize: '24px' }}>✓</div>
-                        <p style={{ fontSize: '14px', color: '#2d3748', wordBreak: 'break-all' }}>
-                          {filename}
-                        </p>
+                        {uploading ? 'Uploading...' : 'Upload'}
+                      </button>
+                    </div>
+
+                    {/* Display uploaded screenshots for this question */}
+                    {uploadedScreenshots[q.questionId] && uploadedScreenshots[q.questionId].length > 0 && (
+                      <div style={{ marginTop: '15px' }}>
+                        <h5 style={{ marginBottom: '10px', color: '#4a5568' }}>
+                          Uploaded Screenshots ({uploadedScreenshots[q.questionId].length})
+                        </h5>
+                        <div className="grid">
+                          {uploadedScreenshots[q.questionId].map((filename, idx) => (
+                            <div
+                              key={idx}
+                              style={{
+                                padding: '15px',
+                                border: '2px solid #48bb78',
+                                borderRadius: '8px',
+                                background: '#f0fff4',
+                                textAlign: 'center',
+                                position: 'relative',
+                              }}
+                            >
+                              <button
+                                onClick={() => handleDeleteScreenshot(q.questionId, filename)}
+                                style={{
+                                  position: 'absolute',
+                                  top: '5px',
+                                  right: '5px',
+                                  background: '#e53e3e',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '50%',
+                                  width: '20px',
+                                  height: '20px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                                title="Delete screenshot"
+                              >
+                                ×
+                              </button>
+                              <div style={{ marginBottom: '10px', fontSize: '24px' }}>✓</div>
+                              <p style={{ fontSize: '14px', color: '#2d3748', wordBreak: 'break-all' }}>
+                                {filename}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
-              )}
+              ))}
             </div>
 
             <div className="card" style={{ textAlign: 'center' }}>
@@ -287,7 +337,7 @@ function TakeExam() {
                 onClick={handleSubmitExam}
                 className="btn btn-primary"
                 style={{ padding: '15px 50px', fontSize: '18px' }}
-                disabled={submitting || uploadedScreenshots.length === 0}
+                disabled={submitting}
               >
                 {submitting ? 'Submitting...' : 'Submit Exam'}
               </button>

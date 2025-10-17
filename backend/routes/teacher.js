@@ -140,7 +140,8 @@ router.get('/submission/:submissionId', authMiddleware, teacherAuth, async (req,
     const submission = await StudentExam.findById(submissionId)
       .populate('studentId', 'name rollNumber email class')
       .populate('examId', 'examName class scheduledDate')
-      .populate('assignedQuestions.questionId');
+      .populate('assignedQuestions.questionId')
+      .populate('screenshots.questionId');
 
     if (!submission) {
       return res.status(404).json({ message: 'Submission not found' });
