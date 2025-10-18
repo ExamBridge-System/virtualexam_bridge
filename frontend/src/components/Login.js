@@ -11,7 +11,7 @@ function Login() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -30,9 +30,9 @@ function Login() {
     try {
       const endpoint = userType === 'teacher' ? '/auth/teacher/login' : '/auth/student/login';
       const response = await api.post(endpoint, formData);
-      
+
       login(response.data.user, response.data.token);
-      
+
       if (userType === 'teacher') {
         navigate('/teacher/dashboard');
       } else {
@@ -48,21 +48,19 @@ function Login() {
   return (
     <div className="container" style={{ paddingTop: '60px' }}>
       <div className="card" style={{ maxWidth: '500px', margin: '0 auto' }}>
-        <h1 style={{ textAlign: 'center', marginBottom: '30px', color: '#667eea' }}>
+        <h1 style={{ textAlign: 'center', marginBottom: '30px' }}>
           Internal Test System
         </h1>
-        
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
+
+        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '30px' }}>
           <button
-            className={`btn ${userType === 'teacher' ? 'btn-primary' : ''}`}
-            style={{ flex: 1, background: userType === 'teacher' ? '#667eea' : '#e2e8f0', color: userType === 'teacher' ? 'white' : '#2d3748' }}
+            className={`btn ${userType === 'teacher' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setUserType('teacher')}
           >
             Teacher Login
           </button>
           <button
-            className={`btn ${userType === 'student' ? 'btn-primary' : ''}`}
-            style={{ flex: 1, background: userType === 'student' ? '#667eea' : '#e2e8f0', color: userType === 'student' ? 'white' : '#2d3748' }}
+            className={`btn ${userType === 'student' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setUserType('student')}
           >
             Student Login
@@ -96,9 +94,9 @@ function Login() {
 
           {error && <div className="error">{error}</div>}
 
-          <button 
-            type="submit" 
-            className="btn btn-primary" 
+          <button
+            type="submit"
+            className="btn btn-primary"
             style={{ width: '100%', marginTop: '20px' }}
             disabled={loading}
           >
@@ -106,9 +104,9 @@ function Login() {
           </button>
         </form>
 
-        <p style={{ textAlign: 'center', marginTop: '20px', color: '#718096' }}>
-          For demo purposes, register users using API endpoints
-        </p>
+        <div className="info-box" style={{ marginTop: '20px', textAlign: 'center' }}>
+          <p>For demo purposes, register users using API endpoints</p>
+        </div>
       </div>
     </div>
   );

@@ -110,38 +110,14 @@ function StudentDashboard() {
     if (!isOpen) return null;
 
     return (
-      <div 
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          fontFamily: 'Inter, sans-serif'
-        }}
-      >
-        <div 
-          style={{
-            backgroundColor: 'white',
-            padding: '25px',
-            borderRadius: '10px',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-            maxWidth: '400px',
-            width: '90%',
-            textAlign: 'center'
-          }}
-        >
-          <h3 style={{ color: title === 'Access Denied' ? '#dc2626' : '#f59e0b', marginBottom: '15px' }}>{title}</h3>
-          <p style={{ color: '#4b5563', marginBottom: '25px' }}>{message}</p>
-          <button 
-            onClick={onClose} 
-            className="btn btn-primary"
-            style={{ width: '100%', backgroundColor: title === 'Access Denied' ? '#dc2626' : '#2563eb' }}
+      <div className="modal-overlay">
+        <div className="modal-content">
+          <h3 style={{ color: title === 'Access Denied' ? 'var(--danger)' : 'var(--warning)', marginBottom: '15px' }}>{title}</h3>
+          <p style={{ color: 'var(--text-light)', marginBottom: '25px' }}>{message}</p>
+          <button
+            onClick={onClose}
+            className={`btn ${title === 'Access Denied' ? 'btn-danger' : 'btn-primary'}`}
+            style={{ width: '100%' }}
           >
             OK
           </button>
@@ -186,7 +162,7 @@ function StudentDashboard() {
         {error && <div className="error">{error}</div>}
 
         {/* Available Exams Section */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+        <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
           {/* Active Exams Panel */}
           <div className="card">
             <div style={{ marginBottom: '25px' }}>
@@ -275,19 +251,9 @@ function StudentDashboard() {
                       cursor: 'default',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <div className="flex-between" style={{ marginBottom: '10px' }}>
                       <strong>📝 {exam.examName}</strong>
-                      <span
-                        style={{
-                          padding: '4px 12px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          background: '#d1fae5',
-                          color: '#065f46',
-                        }}
-                      >
-                        Submitted
-                      </span>
+                      <span className="badge badge-success">Submitted</span>
                     </div>
                     <div style={{ fontSize: '14px', color: '#718096' }}>
                       <div>📖 Class: {exam.class}</div>
@@ -349,17 +315,9 @@ function StudentDashboard() {
                       }}
                       onClick={() => isActive && checkExamAccess(exam._id)}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <div className="flex-between" style={{ marginBottom: '10px' }}>
                         <strong>📝 {exam.examName}</strong>
-                        <span
-                          style={{
-                            padding: '4px 12px',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            background: isActive ? '#d1fae5' : isSubmitted ? '#fef3c7' : '#e2e8f0',
-                            color: isActive ? '#065f46' : isSubmitted ? '#92400e' : '#2d3748',
-                          }}
-                        >
+                        <span className={`badge ${isActive ? 'badge-success' : isSubmitted ? 'badge-warning' : 'badge-secondary'}`}>
                           {isSubmitted ? 'Submitted' : exam.status.replace('_', ' ')}
                         </span>
                       </div>

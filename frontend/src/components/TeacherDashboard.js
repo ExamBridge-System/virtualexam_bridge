@@ -36,50 +36,45 @@ function TeacherDashboard() {
   };
 
   const getStatusBadge = (status) => {
-    const styles = {
-      active: { color: '#10b981', background: '#ecfdf5' },
-      completed: { color: '#3b82f6', background: '#eff6ff' },
-      upcoming: { color: '#f59e0b', background: '#fefce8' },
+    const badgeClass = {
+      active: 'badge badge-success',
+      completed: 'badge badge-primary',
+      upcoming: 'badge badge-warning',
     };
 
-    const style = styles[status] || { color: '#6b7280', background: '#f3f4f6' };
-
     return (
-      <span
-        style={{
-          ...style,
-          padding: '4px 10px',
-          borderRadius: '6px',
-          fontSize: '13px',
-          fontWeight: '600',
-        }}
-      >
+      <span className={badgeClass[status] || 'badge badge-secondary'}>
         {status}
       </span>
     );
   };
 
   return (
-    <div className="container">
-      {/* Hero Section */}
-      <div className="dashboard-hero">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1>👋 Welcome back, {user?.name}!</h1>
-            <p>Manage your exams, questions, and view student submissions</p>
-          </div>
+    <div style={{ fontFamily: 'Inter, sans-serif' }}>
+      {/* Navbar */}
+      <nav className="navbar">
+        <h2>👨‍🏫 Teacher Portal</h2>
+        <div className="navbar-right">
+          <span>Welcome, <strong>{user?.name}</strong></span>
           <button
             onClick={() => {
               logout();
               navigate('/login');
             }}
             className="btn btn-danger"
-            style={{ padding: '10px 20px', fontSize: '14px' }}
+            style={{ padding: '10px 20px' }}
           >
             🚪 Logout
           </button>
         </div>
-      </div>
+      </nav>
+
+      <div className="container">
+        {/* Hero Section */}
+        <div className="dashboard-hero">
+          <h1>👋 Welcome back, {user?.name}!</h1>
+          <p>Manage your exams, questions, and view student submissions</p>
+        </div>
 
       {/* Classes Section */}
       <div className="card">
@@ -112,14 +107,7 @@ function TeacherDashboard() {
 
       {/* Exams Section */}
       <div className="card">
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '30px',
-          }}
-        >
+        <div className="flex-between" style={{ marginBottom: '30px' }}>
           <div>
             <h2>📋 All Exams</h2>
             <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '5px' }}>
@@ -158,16 +146,7 @@ function TeacherDashboard() {
                   <tr key={exam._id}>
                     <td><strong>{exam.examName}</strong></td>
                     <td>
-                      <span
-                        style={{
-                          background: '#eff6ff',
-                          color: '#2563eb',
-                          padding: '4px 10px',
-                          borderRadius: '6px',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                        }}
-                      >
+                      <span className="badge badge-primary">
                         {exam.class}
                       </span>
                     </td>
@@ -195,21 +174,13 @@ function TeacherDashboard() {
                       })()}</strong>
                     </td>
                     <td>
-                      <span
-                        style={{
-                          background: '#f3f4f6',
-                          padding: '4px 10px',
-                          borderRadius: '6px',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                        }}
-                      >
+                      <span className="badge badge-secondary">
                         {exam.numberOfStudents}
                       </span>
                     </td>
                     <td>{getStatusBadge(exam.status)}</td>
                     <td>
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      <div className="flex-wrap">
                         <button
                           onClick={() => navigate(`/teacher/exam/${exam._id}/questions`)}
                           className="btn btn-primary"
@@ -321,6 +292,7 @@ function TeacherDashboard() {
           </div>
         );
       })()}
+      </div>
     </div>
   );
 }
