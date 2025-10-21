@@ -110,21 +110,38 @@ router.post('/exam/:examId/generate-set', authMiddleware, studentAuth, async (re
       return res.status(404).json({ message: 'Exam not found' });
     }
 
-    // Get all questions by level
+    // Get all questions by level
     const easyQuestions = await Question.find({ examId, level: 'easy' });
     const mediumQuestions = await Question.find({ examId, level: 'medium' });
     const hardQuestions = await Question.find({ examId, level: 'hard' });
 
-    // --- FIX: Random distribution should be robust ---
-    // Define possible random distributions
+    // Get counts
+    const easyCount = easyQuestions.length;
+    const mediumCount = mediumQuestions.length;
+    const hardCount = hardQuestions.length;
+
+    // Define possible random distributions
     const distributions = [
       { easy: 3, medium: 0, hard: 0, desc: '3 Easy' },
       { easy: 1, medium: 1, hard: 0, desc: '1 Easy, 1 Medium' },
       { easy: 0, medium: 0, hard: 1, desc: '1 Hard' }
     ];
 
-    // Randomly select a distribution pattern
-    const selectedDistribution = distributions[Math.floor(Math.random() * distributions.length)];
+    // Shuffle the distributions to randomize the order
+    const shuffledDistributions = shuffleArray(distributions);
+
+    // Find the first distribution that can be satisfied
+    let selectedDistribution = null;
+    for (const dist of shuffledDistributions) {
+      if (dist.easy <= easyCount && dist.medium <= mediumCount && dist.hard <= hardCount) {
+        selectedDistribution = dist;
+        break;
+      }
+    }
+
+    if (!selectedDistribution) {
+      return res.status(400).json({ message: 'Not enough questions available to generate a valid set. Please ensure there are sufficient questions in the required levels.' });
+    }
 
     const selectedQuestions = [];
     
