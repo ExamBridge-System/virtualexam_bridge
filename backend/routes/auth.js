@@ -99,7 +99,62 @@ router.post('/student/register', async (req, res) => {
   }
 });
 
-// Student Login
+// Unified Login for both Teacher and Student
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // First, try to find as Teacher
+    let user = await Teacher.findOne({ email });
+    let role = 'teacher';
+
+    if (!user) {
+      // If not found as Teacher, try as Student
+      user = await Student.findOne({ email });
+      role = 'student';
+    }
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign(
+      { id: user._id, role },
+      process.env.JWT_SECRET || 'your_jwt_secret_key_here',
+      { expiresIn: '24h' }
+    );
+
+    const userResponse = role === 'teacher' ? {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      teacherId: user.teacherId,
+      classes: user.classes,
+      role: 'teacher',
+    } : {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      rollNumber: user.rollNumber,
+      class: user.class,
+      role: 'student',
+    };
+
+    res.json({
+      token,
+      user: userResponse,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Student Login (keeping for backward compatibility if needed)
 router.post('/student/login', async (req, res) => {
   try {
     const { email, password } = req.body;

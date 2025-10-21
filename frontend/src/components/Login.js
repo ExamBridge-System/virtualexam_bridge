@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 
 function Login() {
-  const [userType, setUserType] = useState('teacher');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -28,12 +27,11 @@ function Login() {
     setLoading(true);
 
     try {
-      const endpoint = userType === 'teacher' ? '/auth/teacher/login' : '/auth/student/login';
-      const response = await api.post(endpoint, formData);
+      const response = await api.post('/auth/login', formData);
 
       login(response.data.user, response.data.token);
 
-      if (userType === 'teacher') {
+      if (response.data.user.role === 'teacher') {
         navigate('/teacher/dashboard');
       } else {
         navigate('/student/dashboard');
@@ -48,23 +46,18 @@ function Login() {
   return (
     <div className="container" style={{ paddingTop: '60px' }}>
       <div className="card" style={{ maxWidth: '500px', margin: '0 auto' }}>
-        <h1 style={{ textAlign: 'center', marginBottom: '30px' }}>
-          Internal Test System
-        </h1>
-
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '30px' }}>
-          <button
-            className={`btn ${userType === 'teacher' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setUserType('teacher')}
-          >
-            Teacher Login
-          </button>
-          <button
-            className={`btn ${userType === 'student' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setUserType('student')}
-          >
-            Student Login
-          </button>
+        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <img
+            src="/logo192.png"
+            alt="Chaitanya Bharathi Institute of Technology Logo"
+            style={{ width: '80px', height: '80px', marginBottom: '15px' }}
+          />
+          <h1 style={{ margin: '0', fontSize: '24px', color: '#2563eb' }}>
+            Chaitanya Bharathi Institute of Technology
+          </h1>
+          <h2 style={{ margin: '5px 0 0 0', fontSize: '18px', color: '#6b7280', fontWeight: 'normal' }}>
+            Internal Test System
+          </h2>
         </div>
 
         <form onSubmit={handleSubmit}>

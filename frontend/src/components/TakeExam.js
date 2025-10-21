@@ -224,31 +224,8 @@ function TakeExam() {
                     background: '#f7fafc',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+                  <div style={{ marginBottom: '15px' }}>
                     <strong style={{ fontSize: '18px' }}>Question {index + 1}</strong>
-                    <span
-                      style={{
-                        padding: '6px 16px',
-                        borderRadius: '12px',
-                        fontSize: '14px',
-                        fontWeight: 'bold',
-                        background:
-                          q.level === 'easy'
-                            ? '#d1fae5'
-                            : q.level === 'medium'
-                            ? '#fef3c7'
-                            : '#fecaca',
-                        color:
-                          q.level === 'easy'
-                            ? '#065f46'
-                            : q.level === 'medium'
-                            ? '#92400e'
-                            : '#991b1b',
-                        textTransform: 'capitalize',
-                      }}
-                    >
-                      {q.level}
-                    </span>
                   </div>
                   <p style={{ fontSize: '16px', lineHeight: '1.6', marginBottom: '20px' }}>{q.questionText}</p>
 

@@ -193,9 +193,6 @@ function StudentDashboard() {
                       <div>
                         <strong>⏱️ Duration:</strong> {exam.duration} minutes
                       </div>
-                      <div>
-                        <strong>📊 Questions:</strong> {getQuestionCount(exam)} total
-                      </div>
                     </div>
 
                     <button
@@ -259,7 +256,6 @@ function StudentDashboard() {
                       <div>📖 Class: {exam.class}</div>
                       <div>📅 Date: {new Date(exam.scheduledDate).toLocaleDateString()}</div>
                       <div>🕐 Time: {exam.scheduledTime} ({exam.duration} min)</div>
-                      <div>📊 Questions: {getQuestionCount(exam)} total</div>
                       <div>📸 Screenshots: {Object.keys(examStatuses[exam._id]?.uploadedScreenshots || {}).length} questions</div>
                     </div>
                   </div>
@@ -325,7 +321,6 @@ function StudentDashboard() {
                         <div>📖 Class: {exam.class}</div>
                         <div>📅 Date: {new Date(exam.scheduledDate).toLocaleDateString()}</div>
                         <div>🕐 Time: {exam.scheduledTime} ({exam.duration} min)</div>
-                        <div>📊 Questions: {getQuestionCount(exam)} total</div>
                         {isSubmitted && (
                           <div>📸 Screenshots: {Object.keys(examStatuses[exam._id]?.uploadedScreenshots || {}).length} questions</div>
                         )}
