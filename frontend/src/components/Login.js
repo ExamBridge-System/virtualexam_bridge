@@ -96,10 +96,6 @@ function Login() {
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
-
-        <div className="info-box" style={{ marginTop: '20px', textAlign: 'center' }}>
-          <p>For demo purposes, register users using API endpoints</p>
-        </div>
       </div>
     </div>
   );

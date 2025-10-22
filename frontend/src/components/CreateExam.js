@@ -8,9 +8,11 @@ function CreateExam() {
   const navigate = useNavigate();
   const location = useLocation();
   const selectedClass = location.state?.selectedClass || '';
+  const selectedBatch = location.state?.selectedBatch || '';
   const [formData, setFormData] = useState({
     examName: '',
     class: selectedClass,
+    batch: selectedBatch,
     numberOfStudents: '',
     scheduledDate: '',
     scheduledTime: '',

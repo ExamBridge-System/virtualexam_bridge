@@ -9,6 +9,10 @@ const examSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  batch: {
+    type: String,
+    required: false,
+  },
   teacherId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Teacher',

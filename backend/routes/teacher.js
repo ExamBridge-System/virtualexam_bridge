@@ -21,11 +21,12 @@ router.get('/classes', authMiddleware, teacherAuth, async (req, res) => {
 // Create Exam
 router.post('/exam/create', authMiddleware, teacherAuth, async (req, res) => {
   try {
-    const { examName, class: examClass, numberOfStudents, scheduledDate, scheduledTime, duration } = req.body;
+    const { examName, class: examClass, batch, numberOfStudents, scheduledDate, scheduledTime, duration } = req.body;
 
     const exam = new Exam({
       examName,
       class: examClass,
+      batch: batch || undefined,
       teacherId: req.user.id,
       numberOfStudents,
       scheduledDate,

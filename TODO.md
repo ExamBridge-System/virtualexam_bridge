@@ -1,7 +1,10 @@
-# TODO: Merge Login Options for Student and Faculty
+# TODO: Implement Batch-Based Exam Visibility
 
 ## Tasks
-- [x] Modify backend/routes/auth.js to add unified /auth/login endpoint that checks both Teacher and Student collections
-- [x] Update frontend/src/components/Login.js to remove userType selection and use single login form
-- [ ] Test login functionality for both teacher and student roles
-- [ ] Verify dashboards open correctly based on user role
+- [x] Update student registration to include batch field.
+- [x] Update login responses to include batch for students.
+- [x] Modify student exams endpoint to filter by batch.
+- [x] Update teacher dashboard to show "Create Exam for {batch}" buttons for lab slots.
+- [x] Group lab slots by subject in teacher dashboard to avoid duplicate buttons.
+- [x] Create sample students with batches.
+- [x] Test that students only see exams for their batch.

@@ -43,7 +43,12 @@ router.get('/exams', authMiddleware, studentAuth, async (req, res) => {
     const student = await Student.findById(req.user.id);
 
     const exams = await Exam.find({
-      class: student.class
+      class: student.class,
+      $or: [
+        { batch: { $exists: false } },
+        { batch: null },
+        { batch: student.batch }
+      ]
     }).sort({ scheduledDate: -1 });
 
     res.json({ exams });
@@ -65,8 +70,8 @@ router.get('/exam/:examId/access', authMiddleware, studentAuth, async (req, res)
     const Student = require('../models/Student');
     const student = await Student.findById(req.user.id);
 
-    if (exam.class !== student.class) {
-      return res.status(403).json({ message: 'Not enrolled in this class' });
+    if (exam.class !== student.class || (exam.batch && exam.batch !== student.batch)) {
+      return res.status(403).json({ message: 'Not enrolled in this class or batch' });
     }
 
     // Use current date for schedule check, ensuring consistency

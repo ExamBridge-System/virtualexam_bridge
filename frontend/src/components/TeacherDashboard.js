@@ -8,6 +8,22 @@ function TeacherDashboard() {
   const navigate = useNavigate();
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // YYYY-MM-DD format for exam scheduling
+  const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]); // YYYY-MM-DD format for viewing schedule
+
+  // Generate date options for dropdown
+  const dateOptions = [];
+  const today = new Date();
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+    const dateStr = date.toISOString().split('T')[0];
+    let label;
+    if (i === 0) label = 'Today';
+    else if (i === 1) label = 'Tomorrow';
+    else label = date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    dateOptions.push({ value: dateStr, label });
+  }
 
   useEffect(() => {
     fetchExams();
@@ -53,7 +69,7 @@ function TeacherDashboard() {
     <div style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* Navbar */}
       <nav className="navbar">
-        <h2>👨‍🏫 Teacher Portal</h2>
+        <h2>Teacher Portal</h2>
         <div className="navbar-right">
           <span>Welcome, <strong>{user?.name}</strong></span>
           <button
@@ -72,34 +88,192 @@ function TeacherDashboard() {
       <div className="container">
         {/* Hero Section */}
         <div className="dashboard-hero">
-          <h1>👋 Welcome back, {user?.name}!</h1>
+          <h1>Welcome back, {user?.name}!</h1>
           <p>Manage your exams, questions, and view student submissions</p>
         </div>
 
-      {/* Classes Section */}
+        {/* Teacher Details Section */}
+        <div className="card">
+          <h2>Teacher Details</h2>
+          <div className="info-box">
+            <p><strong>Name:</strong> {user?.name}</p>
+            <p><strong>Email:</strong> {user?.email}</p>
+            <p><strong>Teacher ID:</strong> {user?.teacherId}</p>
+            <p><strong>Department:</strong> {user?.department}</p>
+            <p><strong>Classes:</strong> {user?.classes?.join(', ') || 'None'}</p>
+          </div>
+        </div>
+
+        {/* View Schedule Section */}
+        <div className="card">
+          <h2>View Schedule</h2>
+          <div style={{ marginBottom: '20px' }}>
+            <label htmlFor="view-date" style={{ fontSize: '14px', color: '#6b7280', marginRight: '10px' }}>
+              Select Date:
+            </label>
+            <input
+              id="view-date"
+              type="date"
+              value={viewDate}
+              onChange={(e) => setViewDate(e.target.value)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '4px',
+                fontSize: '14px',
+              }}
+            />
+          </div>
+          <p style={{ color: '#6b7280', marginBottom: '20px', fontSize: '14px' }}>
+            Schedule for {new Date(viewDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
+          {(() => {
+            const selectedDateObj = new Date(viewDate);
+            const dayOfWeek = selectedDateObj.toLocaleDateString('en-US', { weekday: 'long' });
+            const daySchedule = user?.timetable?.[dayOfWeek] || [];
+            if (daySchedule.length === 0) {
+              return (
+                <div style={{ textAlign: 'center', padding: '40px', background: '#f9fafb', borderRadius: '8px' }}>
+                  <p style={{ fontSize: '16px', color: '#6b7280' }}>No classes scheduled for this date</p>
+                </div>
+              );
+            }
+            return (
+              <div style={{ overflowX: 'auto' }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Subject</th>
+                      <th>Class</th>
+                      <th>Batches</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {daySchedule.map((slot, index) => (
+                    <tr key={index}>
+                        <td><strong>{slot.time}</strong></td>
+                        <td>{slot.subject}</td>
+                        <td>{slot.class}</td>
+                        <td>{slot.type === 'lab' && slot.batches ? slot.batches.join(', ') : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Schedule Exams Section */}
       <div className="card">
-        <h2>📖 Your Classes</h2>
+        <h2>Schedule Exams</h2>
+        <div style={{ marginBottom: '20px' }}>
+          <label htmlFor="date-select" style={{ fontSize: '14px', color: '#6b7280', marginRight: '10px' }}>
+            Select Date:
+          </label>
+          <select
+            id="date-select"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '4px',
+              fontSize: '14px',
+            }}
+          >
+            {dateOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <p style={{ color: '#6b7280', marginBottom: '20px', fontSize: '14px' }}>
-          You are teaching {user?.classes?.length || 0} classes
+          Schedule exams for {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </p>
         <div className="grid">
-          {user?.classes && user.classes.length > 0 ? (
-            user.classes.map((cls, index) => (
-              <div
-                key={index}
-                className="class-card"
-                onClick={() => navigate('/teacher/exam/create', { state: { selectedClass: cls } })}
-                style={{ cursor: 'pointer' }}
-              >
-                <h3>{cls}</h3>
-                <p style={{ marginTop: '10px', fontSize: '13px', opacity: 0.9 }}>
-                  Click to schedule exam for this class
-                </p>
-              </div>
-            ))
-          ) : (
-            <p style={{ color: '#9ca3af', gridColumn: '1 / -1' }}>No classes assigned yet</p>
-          )}
+          {(() => {
+            const selectedDateObj = new Date(selectedDate);
+            const dayOfWeek = selectedDateObj.toLocaleDateString('en-US', { weekday: 'long' });
+            const daySchedule = user?.timetable?.[dayOfWeek] || [];
+
+            // Group slots by batch for labs, by subject for non-labs
+            const groupedSchedule = {};
+            daySchedule.forEach(slot => {
+              if (slot.type === 'lab') {
+                slot.batches.forEach(batch => {
+                  if (!groupedSchedule[batch]) {
+                    groupedSchedule[batch] = {
+                      batch,
+                      subjects: new Set(),
+                      times: [],
+                      class: slot.class,
+                      type: 'lab'
+                    };
+                  }
+                  groupedSchedule[batch].subjects.add(slot.subject);
+                  groupedSchedule[batch].times.push(slot.time);
+                });
+              } else {
+                if (!groupedSchedule[slot.subject]) {
+                  groupedSchedule[slot.subject] = {
+                    subject: slot.subject,
+                    class: slot.class,
+                    type: slot.type,
+                    times: [],
+                    batches: new Set()
+                  };
+                }
+                groupedSchedule[slot.subject].times.push(slot.time);
+                if (slot.batches) {
+                  slot.batches.forEach(batch => groupedSchedule[slot.subject].batches.add(batch));
+                }
+              }
+            });
+
+            const groupedArray = Object.values(groupedSchedule);
+
+            return groupedArray.length > 0 ? (
+              groupedArray.map((group, index) => (
+                <div
+                  key={index}
+                  className="schedule-card"
+                  style={{
+                    cursor: 'pointer',
+                    backgroundColor: '#ffffff',
+                    color: '#000000',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '20px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  <h3 style={{ color: '#000000', marginBottom: '10px' }}>{group.batch ? `Batch ${group.batch}` : group.subject}</h3>
+                  <div className="exam-card-info">
+                    <p style={{ color: '#000000' }}><strong>Class:</strong> {group.class}</p>
+                    <p style={{ color: '#000000' }}><strong>Time:</strong> {group.times.join(', ')}</p>
+                    {group.batch && (
+                      <p style={{ color: '#000000' }}><strong>Subjects:</strong> {Array.from(group.subjects).join(', ')}</p>
+                    )}
+                    {!group.batch && group.batches.size > 0 && (
+                      <p style={{ color: '#000000' }}><strong>Batches:</strong> {Array.from(group.batches).join(', ')}</p>
+                    )}
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    style={{ marginTop: '15px', backgroundColor: '#3b82f6', color: '#ffffff' }}
+                    onClick={() => navigate('/teacher/exam/create', { state: group.batch ? { selectedClass: group.class, selectedSubject: Array.from(group.subjects)[0], selectedDate, selectedBatch: group.batch } : { selectedClass: group.class, selectedSubject: group.subject, selectedDate } })}
+                  >
+                    {group.batch ? `Create Exam for ${group.batch}` : 'Create Exam'}
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p style={{ color: '#9ca3af', gridColumn: '1 / -1' }}>No classes scheduled for this date</p>
+            );
+          })()}
         </div>
         <button
           onClick={() => navigate('/teacher/exam/create')}
@@ -114,7 +288,7 @@ function TeacherDashboard() {
       <div className="card">
         <div className="flex-between" style={{ marginBottom: '30px' }}>
           <div>
-            <h2>📋 All Exams</h2>
+            <h2>All Exams</h2>
             <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '5px' }}>
               Total exams: {exams.length}
             </p>
@@ -128,13 +302,13 @@ function TeacherDashboard() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>📝 Exam Name</th>
-                  <th>👥 Class</th>
-                  <th>📅 Date</th>
-                  <th>🕐 Time</th>
-                  <th>👨‍🎓 Students</th>
-                  <th>📊 Status</th>
-                  <th>⚙️ Actions</th>
+                  <th>Exam Name</th>
+                  <th>Class</th>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Students</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>

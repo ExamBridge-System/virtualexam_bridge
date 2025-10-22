@@ -9,7 +9,7 @@ const router = express.Router();
 // Teacher Registration
 router.post('/teacher/register', async (req, res) => {
   try {
-    const { name, email, password, teacherId, classes } = req.body;
+    const { name, email, password, teacherId, department, classes, timetable } = req.body;
 
     let teacher = await Teacher.findOne({ email });
     if (teacher) {
@@ -23,7 +23,9 @@ router.post('/teacher/register', async (req, res) => {
       email,
       password: hashedPassword,
       teacherId,
+      department,
       classes: classes || [],
+      timetable: timetable || {},
     });
 
     await teacher.save();
@@ -74,7 +76,7 @@ router.post('/teacher/login', async (req, res) => {
 // Student Registration
 router.post('/student/register', async (req, res) => {
   try {
-    const { name, email, password, rollNumber, class: studentClass } = req.body;
+    const { name, email, password, rollNumber, class: studentClass, batch } = req.body;
 
     let student = await Student.findOne({ email });
     if (student) {
@@ -89,6 +91,7 @@ router.post('/student/register', async (req, res) => {
       password: hashedPassword,
       rollNumber,
       class: studentClass,
+      batch,
     });
 
     await student.save();
@@ -134,7 +137,9 @@ router.post('/login', async (req, res) => {
       name: user.name,
       email: user.email,
       teacherId: user.teacherId,
+      department: user.department,
       classes: user.classes,
+      timetable: user.timetable,
       role: 'teacher',
     } : {
       id: user._id,
@@ -142,6 +147,7 @@ router.post('/login', async (req, res) => {
       email: user.email,
       rollNumber: user.rollNumber,
       class: user.class,
+      batch: user.batch,
       role: 'student',
     };
 
@@ -183,6 +189,7 @@ router.post('/student/login', async (req, res) => {
         email: student.email,
         rollNumber: student.rollNumber,
         class: student.class,
+        batch: student.batch,
         role: 'student',
       },
     });

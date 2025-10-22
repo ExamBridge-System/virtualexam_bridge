@@ -135,7 +135,7 @@ function StudentDashboard() {
         <div className="navbar-right">
           <span>Welcome, <strong>{user?.name}</strong></span>
           <button onClick={handleLogout} className="btn btn-danger" style={{ padding: '10px 20px' }}>
-            🚪 Logout
+            Logout
           </button>
         </div>
       </nav>
@@ -143,18 +143,19 @@ function StudentDashboard() {
       <div className="container">
         {/* Hero Section */}
         <div className="dashboard-hero">
-          <h1>👋 Hello, {user?.name}!</h1>
+          <h1>Hello, {user?.name}!</h1>
           <p>View and take your scheduled exams</p>
         </div>
 
         {/* Student Info Card */}
         <div className="card">
-          <h2>📋 Student Information</h2>
+          <h2>Student Information</h2>
           <div className="info-box">
-            <p><strong>👤 Full Name:</strong> {user?.name}</p>
-            <p><strong>🆔 Roll Number:</strong> {user?.rollNumber}</p>
-            <p><strong>📖 Class:</strong> {user?.class}</p>
-            <p><strong>📧 Email:</strong> {user?.email}</p>
+            <p><strong> Full Name:</strong> {user?.name}</p>
+            <p><strong> Roll Number:</strong> {user?.rollNumber}</p>
+            <p><strong> Class:</strong> {user?.class}</p>
+            {user?.batch && <p><strong> Batch:</strong> {user?.batch}</p>}
+            <p><strong> Email:</strong> {user?.email}</p>
           </div>
         </div>
         
@@ -166,7 +167,7 @@ function StudentDashboard() {
           {/* Active Exams Panel */}
           <div className="card">
             <div style={{ marginBottom: '25px' }}>
-              <h2>🟢 Active Exams</h2>
+              <h2>Active Exams</h2>
               <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '5px' }}>
                 Currently available exams
               </p>
@@ -178,20 +179,20 @@ function StudentDashboard() {
               <div className="grid">
                 {exams.filter(exam => isExamActive(exam)).map((exam) => (
                   <div key={exam._id} className="exam-card" style={{ border: '2px solid #10b981' }}>
-                    <h3>📝 {exam.examName}</h3>
+                    <h3>{exam.examName}</h3>
 
                     <div className="exam-card-info">
                       <div>
-                        <strong>📖 Class:</strong> {exam.class}
+                        <strong>Class:</strong> {exam.class}
                       </div>
                       <div>
-                        <strong>📅 Date:</strong> {new Date(exam.scheduledDate).toLocaleDateString()}
+                        <strong>Date:</strong> {new Date(exam.scheduledDate).toLocaleDateString()}
                       </div>
                       <div>
-                        <strong>🕐 Time:</strong> {exam.scheduledTime}
+                        <strong>Time:</strong> {exam.scheduledTime}
                       </div>
                       <div>
-                        <strong>⏱️ Duration:</strong> {exam.duration} minutes
+                        <strong>Duration:</strong> {exam.duration} minutes
                       </div>
                     </div>
 
@@ -200,7 +201,7 @@ function StudentDashboard() {
                       className="btn btn-primary"
                       style={{ width: '100%', background: '#10b981' }}
                     >
-                      🚀 Enter Exam
+                      Enter Exam
                     </button>
                   </div>
                 ))}
@@ -226,7 +227,7 @@ function StudentDashboard() {
           {/* Completed Exams Panel */}
           <div className="card">
             <div style={{ marginBottom: '25px' }}>
-              <h2>✅ Completed Exams</h2>
+              <h2>Completed Exams</h2>
               <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '5px' }}>
                 Exams you have submitted
               </p>
@@ -249,14 +250,14 @@ function StudentDashboard() {
                     }}
                   >
                     <div className="flex-between" style={{ marginBottom: '10px' }}>
-                      <strong>📝 {exam.examName}</strong>
+                      <strong>{exam.examName}</strong>
                       <span className="badge badge-success">Submitted</span>
                     </div>
                     <div style={{ fontSize: '14px', color: '#718096' }}>
-                      <div>📖 Class: {exam.class}</div>
-                      <div>📅 Date: {new Date(exam.scheduledDate).toLocaleDateString()}</div>
-                      <div>🕐 Time: {exam.scheduledTime} ({exam.duration} min)</div>
-                      <div>📸 Screenshots: {Object.keys(examStatuses[exam._id]?.uploadedScreenshots || {}).length} questions</div>
+                      <div>Class: {exam.class}</div>
+                      <div>Date: {new Date(exam.scheduledDate).toLocaleDateString()}</div>
+                      <div>Time: {exam.scheduledTime} ({exam.duration} min)</div>
+                      <div>Screenshots: {Object.keys(examStatuses[exam._id]?.uploadedScreenshots || {}).length} questions</div>
                     </div>
                   </div>
                 ))}
@@ -282,7 +283,7 @@ function StudentDashboard() {
           {/* All Exams Panel */}
           <div className="card">
             <div style={{ marginBottom: '25px' }}>
-              <h2>📋 All Exams</h2>
+              <h2>All Exams</h2>
               <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '5px' }}>
                 {loading ? 'Loading...' : `${exams.length} exam(s) scheduled for your class`}
               </p>
@@ -312,17 +313,17 @@ function StudentDashboard() {
                       onClick={() => isActive && checkExamAccess(exam._id)}
                     >
                       <div className="flex-between" style={{ marginBottom: '10px' }}>
-                        <strong>📝 {exam.examName}</strong>
+                        <strong>{exam.examName}</strong>
                         <span className={`badge ${isActive ? 'badge-success' : isSubmitted ? 'badge-warning' : 'badge-secondary'}`}>
                           {isSubmitted ? 'Submitted' : exam.status.replace('_', ' ')}
                         </span>
                       </div>
                       <div style={{ fontSize: '14px', color: '#718096' }}>
-                        <div>📖 Class: {exam.class}</div>
-                        <div>📅 Date: {new Date(exam.scheduledDate).toLocaleDateString()}</div>
-                        <div>🕐 Time: {exam.scheduledTime} ({exam.duration} min)</div>
+                        <div>Class: {exam.class}</div>
+                        <div>Date: {new Date(exam.scheduledDate).toLocaleDateString()}</div>
+                        <div>Time: {exam.scheduledTime} ({exam.duration} min)</div>
                         {isSubmitted && (
-                          <div>📸 Screenshots: {Object.keys(examStatuses[exam._id]?.uploadedScreenshots || {}).length} questions</div>
+                          <div>Screenshots: {Object.keys(examStatuses[exam._id]?.uploadedScreenshots || {}).length} questions</div>
                         )}
                       </div>
                       {isActive && (
@@ -334,7 +335,7 @@ function StudentDashboard() {
                           className="btn btn-primary"
                           style={{ width: '100%', marginTop: '10px', background: '#10b981' }}
                         >
-                          🚀 Enter Exam
+                          Enter Exam
                         </button>
                       )}
                     </div>
