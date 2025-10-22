@@ -85,10 +85,15 @@ function TeacherDashboard() {
         <div className="grid">
           {user?.classes && user.classes.length > 0 ? (
             user.classes.map((cls, index) => (
-              <div key={index} className="class-card">
+              <div
+                key={index}
+                className="class-card"
+                onClick={() => navigate('/teacher/exam/create', { state: { selectedClass: cls } })}
+                style={{ cursor: 'pointer' }}
+              >
                 <h3>{cls}</h3>
                 <p style={{ marginTop: '10px', fontSize: '13px', opacity: 0.9 }}>
-                  Class ID: {cls}
+                  Click to schedule exam for this class
                 </p>
               </div>
             ))
@@ -114,15 +119,6 @@ function TeacherDashboard() {
               Total exams: {exams.length}
             </p>
           </div>
-          {!loading && exams.length > 0 && (
-            <button
-              onClick={() => navigate('/teacher/exam/create')}
-              className="btn btn-primary"
-              style={{ padding: '12px 20px' }}
-            >
-              ➕ Add Exam
-            </button>
-          )}
         </div>
 
         {loading ? (

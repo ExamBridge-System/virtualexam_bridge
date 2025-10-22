@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 
 function CreateExam() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const selectedClass = location.state?.selectedClass || '';
   const [formData, setFormData] = useState({
     examName: '',
-    class: '',
+    class: selectedClass,
     numberOfStudents: '',
     scheduledDate: '',
     scheduledTime: '',
@@ -72,20 +74,26 @@ function CreateExam() {
             </div>
 
             <div className="form-group">
-              <label>Select Class</label>
-              <select
-                name="class"
-                value={formData.class}
-                onChange={handleChange}
-                required
-              >
-                <option value="">-- Select Class --</option>
-                {user?.classes && user.classes.map((cls, index) => (
-                  <option key={index} value={cls}>
-                    {cls}
-                  </option>
-                ))}
-              </select>
+              <label>Class</label>
+              {selectedClass ? (
+                <div style={{ padding: '10px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: '#f9f9f9' }}>
+                  {selectedClass}
+                </div>
+              ) : (
+                <select
+                  name="class"
+                  value={formData.class}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">-- Select Class --</option>
+                  {user?.classes && user.classes.map((cls, index) => (
+                    <option key={index} value={cls}>
+                      {cls}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className="form-group">
