@@ -155,7 +155,7 @@ function TeacherDashboard() {
                         <td><strong>{slot.time}</strong></td>
                         <td>{slot.subject}</td>
                         <td>{slot.class}</td>
-                        <td>{slot.type === 'lab' && slot.batches ? slot.batches.join(', ') : '-'}</td>
+                        <td>{slot.type === 'lab' && (slot.batch || slot.batches) ? (slot.batch || slot.batches.join(', ')) : '-'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -203,19 +203,20 @@ function TeacherDashboard() {
             const groupedSchedule = {};
             daySchedule.forEach(slot => {
               if (slot.type === 'lab') {
-                slot.batches.forEach(batch => {
-                  if (!groupedSchedule[batch]) {
-                    groupedSchedule[batch] = {
-                      batch,
-                      subjects: new Set(),
-                      times: [],
-                      class: slot.class,
-                      type: 'lab'
-                    };
-                  }
+                const batch = slot.batch || (slot.batches && slot.batches[0]);
+                if (batch && !groupedSchedule[batch]) {
+                  groupedSchedule[batch] = {
+                    batch,
+                    subjects: new Set(),
+                    times: [],
+                    class: slot.class,
+                    type: 'lab'
+                  };
+                }
+                if (batch) {
                   groupedSchedule[batch].subjects.add(slot.subject);
                   groupedSchedule[batch].times.push(slot.time);
-                });
+                }
               } else {
                 if (!groupedSchedule[slot.subject]) {
                   groupedSchedule[slot.subject] = {
@@ -227,8 +228,8 @@ function TeacherDashboard() {
                   };
                 }
                 groupedSchedule[slot.subject].times.push(slot.time);
-                if (slot.batches) {
-                  slot.batches.forEach(batch => groupedSchedule[slot.subject].batches.add(batch));
+                if (slot.batch) {
+                  groupedSchedule[slot.subject].batches.add(slot.batch);
                 }
               }
             });
@@ -255,9 +256,12 @@ function TeacherDashboard() {
                     <p style={{ color: '#000000' }}><strong>Class:</strong> {group.class}</p>
                     <p style={{ color: '#000000' }}><strong>Time:</strong> {group.times.join(', ')}</p>
                     {group.batch && (
-                      <p style={{ color: '#000000' }}><strong>Subjects:</strong> {Array.from(group.subjects).join(', ')}</p>
+                      <>
+                        <p style={{ color: '#000000' }}><strong>Batch:</strong> {group.batch}</p>
+                        <p style={{ color: '#000000' }}><strong>Subjects:</strong> {Array.from(group.subjects).join(', ')}</p>
+                      </>
                     )}
-                    {!group.batch && group.batches.size > 0 && (
+                    {group.type !== 'lab' && group.batches && group.batches.size > 0 && (
                       <p style={{ color: '#000000' }}><strong>Batches:</strong> {Array.from(group.batches).join(', ')}</p>
                     )}
                   </div>

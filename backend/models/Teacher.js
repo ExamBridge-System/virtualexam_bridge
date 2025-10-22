@@ -27,7 +27,7 @@ const teacherSchema = new mongoose.Schema({
     type: String,
   }],
   timetable: {
-    type: Object, // { Monday: [{ time: '9:00–10:00', subject: 'SUB-1', type: 'class' }, { time: '10:00–11:00', subject: 'LAB-A', type: 'lab', batches: ['B1', 'B2'] }, ...], ... }
+    type: Object, // { Monday: [{ time: '9:00–10:00', subject: 'SUB-1', type: 'class' }, { time: '10:00–11:00', subject: 'LAB-A', type: 'lab', batch: 'B1' }, ...], ... }
     default: {},
   },
   createdAt: {

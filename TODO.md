@@ -8,3 +8,5 @@
 - [x] Group lab slots by subject in teacher dashboard to avoid duplicate buttons.
 - [x] Create sample students with batches.
 - [x] Test that students only see exams for their batch.
+- [x] Fix timetable schema: Change 'batches' array to 'batch' string for lab slots.
+- [x] Update TeacherDashboard.js to use single batch per lab slot.
