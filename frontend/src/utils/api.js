@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// 1. CRITICAL FIX: Change port 3001 to 5000
+// API base URL
 const API_URL = 'http://localhost:3001/api';
 
 const api = axios.create({

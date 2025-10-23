@@ -27,14 +27,20 @@ function Login() {
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/login', formData);
-
-      login(response.data.user, response.data.token);
-
-      if (response.data.user.role === 'teacher') {
-        navigate('/teacher/dashboard');
+      // Check if it's admin login
+      if (formData.email === 'admin@example.com') {
+        const response = await api.post('/admin/login', formData);
+        login(response.data.user, response.data.token);
+        navigate('/admin/dashboard');
       } else {
-        navigate('/student/dashboard');
+        const response = await api.post('/auth/login', formData);
+        login(response.data.user, response.data.token);
+
+        if (response.data.user.role === 'teacher') {
+          navigate('/teacher/dashboard');
+        } else {
+          navigate('/student/dashboard');
+        }
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
@@ -62,14 +68,14 @@ function Login() {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Email</label>
+            <label>ID</label>
             <input
-              type="email"
+              type="text"
               name="email"
               value={formData.email}
               onChange={handleChange}
               required
-              placeholder="Enter your email"
+              placeholder="Enter your ID"
             />
           </div>
 

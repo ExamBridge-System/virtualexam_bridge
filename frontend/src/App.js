@@ -8,6 +8,7 @@ import AddQuestions from './components/AddQuestions';
 import ViewStudentSubmissions from './components/ViewStudentSubmissions';
 import StudentDashboard from './components/StudentDashboard';
 import TakeExam from './components/TakeExam';
+import SuperAdminDashboard from './components/SuperAdminDashboard';
 
 function PrivateRoute({ children, role }) {
   const { user } = useAuth();
@@ -75,15 +76,24 @@ function App() {
             } 
           />
           
-          <Route 
-            path="/student/exam/:examId" 
+          <Route
+            path="/student/exam/:examId"
             element={
               <PrivateRoute role="student">
                 <TakeExam />
               </PrivateRoute>
-            } 
+            }
           />
-          
+
+          <Route
+            path="/admin/dashboard"
+            element={
+              <PrivateRoute role="admin">
+                <SuperAdminDashboard />
+              </PrivateRoute>
+            }
+          />
+
           <Route path="/" element={<Navigate to="/login" />} />
         </Routes>
       </Router>

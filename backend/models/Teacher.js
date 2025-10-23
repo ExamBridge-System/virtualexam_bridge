@@ -23,7 +23,7 @@ const teacherSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  classes: [{
+  branchSection: [{
     type: String,
   }],
   timetable: {

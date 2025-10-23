@@ -8,22 +8,7 @@ function TeacherDashboard() {
   const navigate = useNavigate();
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // YYYY-MM-DD format for exam scheduling
-  const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]); // YYYY-MM-DD format for viewing schedule
 
-  // Generate date options for dropdown
-  const dateOptions = [];
-  const today = new Date();
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    const dateStr = date.toISOString().split('T')[0];
-    let label;
-    if (i === 0) label = 'Today';
-    else if (i === 1) label = 'Tomorrow';
-    else label = date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-    dateOptions.push({ value: dateStr, label });
-  }
 
   useEffect(() => {
     fetchExams();
@@ -80,7 +65,7 @@ function TeacherDashboard() {
             className="btn btn-danger"
             style={{ padding: '10px 20px' }}
           >
-            🚪 Logout
+            Logout
           </button>
         </div>
       </nav>
@@ -104,189 +89,17 @@ function TeacherDashboard() {
           </div>
         </div>
 
-        {/* View Schedule Section */}
+        {/* Schedule Exam Section */}
         <div className="card">
-          <h2>View Schedule</h2>
-          <div style={{ marginBottom: '20px' }}>
-            <label htmlFor="view-date" style={{ fontSize: '14px', color: '#6b7280', marginRight: '10px' }}>
-              Select Date:
-            </label>
-            <input
-              id="view-date"
-              type="date"
-              value={viewDate}
-              onChange={(e) => setViewDate(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                fontSize: '14px',
-              }}
-            />
-          </div>
-          <p style={{ color: '#6b7280', marginBottom: '20px', fontSize: '14px' }}>
-            Schedule for {new Date(viewDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </p>
-          {(() => {
-            const selectedDateObj = new Date(viewDate);
-            const dayOfWeek = selectedDateObj.toLocaleDateString('en-US', { weekday: 'long' });
-            const daySchedule = user?.timetable?.[dayOfWeek] || [];
-            if (daySchedule.length === 0) {
-              return (
-                <div style={{ textAlign: 'center', padding: '40px', background: '#f9fafb', borderRadius: '8px' }}>
-                  <p style={{ fontSize: '16px', color: '#6b7280' }}>No classes scheduled for this date</p>
-                </div>
-              );
-            }
-            return (
-              <div style={{ overflowX: 'auto' }}>
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Time</th>
-                      <th>Subject</th>
-                      <th>Class</th>
-                      <th>Batches</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {daySchedule.map((slot, index) => (
-                    <tr key={index}>
-                        <td><strong>{slot.time}</strong></td>
-                        <td>{slot.subject}</td>
-                        <td>{slot.class}</td>
-                        <td>{slot.type === 'lab' && (slot.batch || slot.batches) ? (slot.batch || slot.batches.join(', ')) : '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            );
-          })()}
-        </div>
-
-        {/* Schedule Exams Section */}
-      <div className="card">
-        <h2>Schedule Exams</h2>
-        <div style={{ marginBottom: '20px' }}>
-          <label htmlFor="date-select" style={{ fontSize: '14px', color: '#6b7280', marginRight: '10px' }}>
-            Select Date:
-          </label>
-          <select
-            id="date-select"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            style={{
-              padding: '8px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: '4px',
-              fontSize: '14px',
-            }}
+          <h2>Schedule Exam</h2>
+          <button
+            onClick={() => navigate('/teacher/exam/create')}
+            className="btn btn-primary"
+            style={{ padding: '14px 28px', fontSize: '15px' }}
           >
-            {dateOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            ➕ Schedule New Exam
+          </button>
         </div>
-        <p style={{ color: '#6b7280', marginBottom: '20px', fontSize: '14px' }}>
-          Schedule exams for {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-        </p>
-        <div className="grid">
-          {(() => {
-            const selectedDateObj = new Date(selectedDate);
-            const dayOfWeek = selectedDateObj.toLocaleDateString('en-US', { weekday: 'long' });
-            const daySchedule = user?.timetable?.[dayOfWeek] || [];
-
-            // Group slots by batch for labs, by subject for non-labs
-            const groupedSchedule = {};
-            daySchedule.forEach(slot => {
-              if (slot.type === 'lab') {
-                const batch = slot.batch || (slot.batches && slot.batches[0]);
-                if (batch && !groupedSchedule[batch]) {
-                  groupedSchedule[batch] = {
-                    batch,
-                    subjects: new Set(),
-                    times: [],
-                    class: slot.class,
-                    type: 'lab'
-                  };
-                }
-                if (batch) {
-                  groupedSchedule[batch].subjects.add(slot.subject);
-                  groupedSchedule[batch].times.push(slot.time);
-                }
-              } else {
-                if (!groupedSchedule[slot.subject]) {
-                  groupedSchedule[slot.subject] = {
-                    subject: slot.subject,
-                    class: slot.class,
-                    type: slot.type,
-                    times: [],
-                    batches: new Set()
-                  };
-                }
-                groupedSchedule[slot.subject].times.push(slot.time);
-                if (slot.batch) {
-                  groupedSchedule[slot.subject].batches.add(slot.batch);
-                }
-              }
-            });
-
-            const groupedArray = Object.values(groupedSchedule);
-
-            return groupedArray.length > 0 ? (
-              groupedArray.map((group, index) => (
-                <div
-                  key={index}
-                  className="schedule-card"
-                  style={{
-                    cursor: 'pointer',
-                    backgroundColor: '#ffffff',
-                    color: '#000000',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    padding: '20px',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                  }}
-                >
-                  <h3 style={{ color: '#000000', marginBottom: '10px' }}>{group.batch ? `Batch ${group.batch}` : group.subject}</h3>
-                  <div className="exam-card-info">
-                    <p style={{ color: '#000000' }}><strong>Class:</strong> {group.class}</p>
-                    <p style={{ color: '#000000' }}><strong>Time:</strong> {group.times.join(', ')}</p>
-                    {group.batch && (
-                      <>
-                        <p style={{ color: '#000000' }}><strong>Batch:</strong> {group.batch}</p>
-                        <p style={{ color: '#000000' }}><strong>Subjects:</strong> {Array.from(group.subjects).join(', ')}</p>
-                      </>
-                    )}
-                    {group.type !== 'lab' && group.batches && group.batches.size > 0 && (
-                      <p style={{ color: '#000000' }}><strong>Batches:</strong> {Array.from(group.batches).join(', ')}</p>
-                    )}
-                  </div>
-                  <button
-                    className="btn btn-primary"
-                    style={{ marginTop: '15px', backgroundColor: '#3b82f6', color: '#ffffff' }}
-                    onClick={() => navigate('/teacher/exam/create', { state: group.batch ? { selectedClass: group.class, selectedSubject: Array.from(group.subjects)[0], selectedDate, selectedBatch: group.batch } : { selectedClass: group.class, selectedSubject: group.subject, selectedDate } })}
-                  >
-                    {group.batch ? `Create Exam for ${group.batch}` : 'Create Exam'}
-                  </button>
-                </div>
-              ))
-            ) : (
-              <p style={{ color: '#9ca3af', gridColumn: '1 / -1' }}>No classes scheduled for this date</p>
-            );
-          })()}
-        </div>
-        <button
-          onClick={() => navigate('/teacher/exam/create')}
-          className="btn btn-secondary"
-          style={{ marginTop: '30px', padding: '14px 28px', fontSize: '15px' }}
-        >
-          ➕ Schedule New Exam
-        </button>
-      </div>
 
       {/* Exams Section */}
       <div className="card">

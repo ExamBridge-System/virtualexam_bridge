@@ -52,7 +52,18 @@ async function createOrUpdateTeacher() {
       ]
     };
 
-    const hashedPassword = await bcrypt.hash('password123', 10);
+    // Extract unique branch-sections from timetable
+    const uniqueClasses = new Set();
+    Object.values(timetable).forEach(daySlots => {
+      daySlots.forEach(slot => {
+        if (slot.class) {
+          uniqueClasses.add(slot.class);
+        }
+      });
+    });
+    const branchSection = Array.from(uniqueClasses);
+
+    const hashedPassword = await bcrypt.hash('T001', 10);
 
     const teacherData = {
       name: 'John Doe',
@@ -60,7 +71,7 @@ async function createOrUpdateTeacher() {
       password: hashedPassword,
       teacherId: 'T001',
       department: 'Computer Science',
-      classes: ['IT-2', 'IT-3', 'CSE-4'],
+      branchSection,
       timetable,
     };
 
@@ -81,7 +92,7 @@ async function createOrUpdateTeacher() {
     ];
 
     for (const studentData of students) {
-      const studentHashedPassword = await bcrypt.hash('password123', 10);
+      const studentHashedPassword = await bcrypt.hash(studentData.rollNumber, 10);
       await Student.updateOne(
         { email: studentData.email },
         { $set: { ...studentData, password: studentHashedPassword } },
@@ -89,6 +100,27 @@ async function createOrUpdateTeacher() {
       );
       console.log(`✅ Student ${studentData.name} created or updated`);
     }
+
+    // Create super admin
+    const adminHashedPassword = await bcrypt.hash('admin123', 10);
+    await Student.updateOne(
+      { email: 'admin@example.com' },
+      {
+        $set: {
+          name: 'Super Admin',
+          email: 'admin@example.com',
+          password: adminHashedPassword,
+          rollNumber: 'ADMIN001',
+          class: 'Admin',
+          batch: 'Admin',
+          branch: 'Admin',
+          section: 'Admin',
+          semester: 'Admin',
+        }
+      },
+      { upsert: true }
+    );
+    console.log('✅ Super Admin created or updated');
 
     const updatedTeacher = await Teacher.findOne({ email: 'john@example.com' });
     if (updatedTeacher) {

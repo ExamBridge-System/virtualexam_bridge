@@ -27,6 +27,18 @@ const studentSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  branch: {
+    type: String,
+    required: false,
+  },
+  section: {
+    type: String,
+    required: false,
+  },
+  semester: {
+    type: String,
+    required: false,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
