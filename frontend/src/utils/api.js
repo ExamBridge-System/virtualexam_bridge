@@ -20,4 +20,10 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Student API functions for email change
+export const studentAPI = {
+  sendVerificationCode: (newEmail) => api.post('/student/send-verification-code', { newEmail }),
+  verifyEmail: (newEmail, code) => api.post('/student/verify-email', { newEmail, code }),
+};
+
 export default api;

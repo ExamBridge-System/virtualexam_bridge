@@ -1,16 +1,18 @@
-# TODO: Implement Super Admin Dashboard
+# TODO: Add Default Email and Change/Verify Option in Student Dashboard
 
 ## Backend Changes
-- [x] Update Student Model: Add branch, section, semester fields to backend/models/Student.js
-- [x] Update create-users.js: Add super admin user with credentials
-- [x] Create backend/routes/admin.js: New routes for uploading teacher timetable CSV, student details CSV, and adding single student
-- [x] Update backend/routes/auth.js: Add admin login route and modify unified login for first-time login using roll/ID
+- [ ] Update Student model to make email optional but unique
+- [ ] Update student registration in auth.js to allow no email
+- [ ] Install nodemailer for email sending
+- [ ] Add route to send verification code to new email (/student/send-verification-code)
+- [ ] Add route to verify code and update email (/student/verify-email)
 
 ## Frontend Changes
-- [x] Create frontend/src/components/SuperAdminDashboard.js: New component with forms for CSV uploads and single student addition
-- [x] Update frontend/src/components/Login.js: Add option to login as admin or detect role
-- [x] Update frontend/src/App.js: Add routes for super admin dashboard
+- [ ] Update StudentDashboard to show email in info card with "Edit" button
+- [ ] Add modal for email change with two steps: enter new email and send code, then enter code to verify
+- [ ] Update api.js with functions for new endpoints
 
-## Followup Steps
-- [x] Install multer for file uploads if not present
-- [x] Test admin login, CSV uploads, single student add, first-time login flows
+## Testing
+- [ ] Test email sending (configure SMTP)
+- [ ] Test email change flow in dashboard
+- [ ] Ensure forgot password can use the email later
