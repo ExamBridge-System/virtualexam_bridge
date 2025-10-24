@@ -92,7 +92,7 @@ function CreateExam() {
         const response = await api.get(`/teacher/semesters/${date}`);
         console.log('Semesters response:', response.data);
         const semesters = response.data.semesters;
-        if (semesters.length === 1) {
+        if (semesters.length > 0) {
           setFormData(prev => ({ ...prev, semester: semesters[0] }));
         }
         setExamOptions(prev => ({ ...prev, semesters }));
@@ -147,8 +147,10 @@ function CreateExam() {
     }
   };
 
+  const isLabSubject = (subject) => subject && subject.toLowerCase().includes('lab');
+
   const fetchBatch = async (date, semester, branch, section, subject) => {
-    if (date && semester && branch && section && subject) {
+    if (date && semester && branch && section && subject && isLabSubject(subject)) {
       try {
         const response = await api.get(`/teacher/batch/${date}/${semester}/${branch}/${section}/${encodeURIComponent(subject)}`);
         const batch = response.data.batch;
@@ -161,8 +163,14 @@ function CreateExam() {
         console.error('Error fetching batch:', error);
         setFormData(prev => ({ ...prev, batch: '' }));
       }
+    } else {
+      setFormData(prev => ({ ...prev, batch: '' }));
     }
   };
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   useEffect(() => {
     if (formData.scheduledDate) {
@@ -390,7 +398,6 @@ function CreateExam() {
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Semester</label>
                   <select name="semester" value={formData.semester} onChange={handleChange} required disabled={!formData.scheduledDate} style={{ padding: '10px', height: '40px', fontSize: '16px' }}>
-                    <option value="">-- Select --</option>
                     {examOptions.semesters.map(semester => (
                       <option key={semester} value={semester}>{semester}</option>
                     ))}

@@ -54,7 +54,7 @@ function TeacherDashboard() {
     <div style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* Navbar */}
       <nav className="navbar">
-        <h2>Teacher Portal</h2>
+        <h2>Exam Management Portal</h2>
         <div className="navbar-right">
           <span>Welcome, <strong>{user?.name}</strong></span>
           <button
@@ -77,15 +77,14 @@ function TeacherDashboard() {
           <p>Manage your exams, questions, and view student submissions</p>
         </div>
 
-        {/* Teacher Details Section */}
+        {/* Teacher Information Section */}
         <div className="card">
-          <h2>Teacher Details</h2>
+          <h2>Teacher Information</h2>
           <div className="info-box">
-            <p><strong>Name:</strong> {user?.name}</p>
-            <p><strong>Email:</strong> {user?.email}</p>
-            <p><strong>Teacher ID:</strong> {user?.teacherId}</p>
-            <p><strong>Department:</strong> {user?.department}</p>
-            <p><strong>Classes:</strong> {user?.classes?.join(', ') || 'None'}</p>
+            <p><strong> Full Name:</strong> {user?.name}</p>
+            <p><strong> Teacher ID:</strong> {user?.teacherId}</p>
+            <p><strong> Department:</strong> {user?.department}</p>
+            <p><strong> Email:</strong> {user?.email}</p>
           </div>
         </div>
 
@@ -93,7 +92,10 @@ function TeacherDashboard() {
         <div className="card">
           <h2>Schedule Exam</h2>
           <button
-            onClick={() => navigate('/teacher/exam/create')}
+            onClick={() => {
+              window.scrollTo(0, 0);
+              navigate('/teacher/exam/create');
+            }}
             className="btn btn-primary"
             style={{ padding: '14px 28px', fontSize: '15px' }}
           >
@@ -167,25 +169,25 @@ function TeacherDashboard() {
                     </td>
                     <td>{getStatusBadge(exam.status)}</td>
                     <td>
-                      <div className="flex-wrap">
+                      <div style={{ display: 'flex', gap: '5px' }}>
                         <button
                           onClick={() => navigate(`/teacher/exam/${exam._id}/questions`)}
-                          className="btn btn-primary"
-                          style={{ padding: '6px 12px', fontSize: '12px' }}
+                          className="btn btn-primary btn-sm"
+                          style={{ padding: '4px 8px', fontSize: '12px' }}
                         >
                           Questions
                         </button>
                         <button
                           onClick={() => navigate(`/teacher/exam/${exam._id}/submissions`)}
-                          className="btn btn-secondary"
-                          style={{ padding: '6px 12px', fontSize: '12px' }}
+                          className="btn btn-primary btn-sm"
+                          style={{ padding: '4px 8px', fontSize: '12px' }}
                         >
                           Submissions
                         </button>
                         <button
                           onClick={() => handleDeleteExam(exam._id, exam.examName)}
-                          className="btn btn-danger"
-                          style={{ padding: '6px 12px', fontSize: '12px' }}
+                          className="btn btn-danger btn-sm"
+                          style={{ padding: '4px 8px', fontSize: '12px' }}
                         >
                           Delete
                         </button>
@@ -209,7 +211,10 @@ function TeacherDashboard() {
             <p style={{ fontSize: '18px', color: '#6b7280', marginBottom: '20px' }}>
               📭 No exams scheduled yet
             </p>
-            <button onClick={() => navigate('/teacher/exam/create')} className="btn btn-primary">
+            <button onClick={() => {
+              window.scrollTo(0, 0);
+              navigate('/teacher/exam/create');
+            }} className="btn btn-primary">
               ➕ Create Your First Exam
             </button>
           </div>

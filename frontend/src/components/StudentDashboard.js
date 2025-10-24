@@ -143,7 +143,7 @@ function StudentDashboard() {
       <div className="container">
         {/* Hero Section */}
         <div className="dashboard-hero">
-          <h1>Hello, {user?.name}!</h1>
+          <h1>Welcome back, {user?.name}!</h1>
           <p>View and take your scheduled exams</p>
         </div>
 

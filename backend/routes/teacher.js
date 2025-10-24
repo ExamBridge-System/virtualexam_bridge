@@ -254,19 +254,17 @@ router.get('/exam-options', authMiddleware, teacherAuth, async (req, res) => {
   }
 });
 
-// Get number of students for a specific branch-section
 router.get('/students-count/:branch/:section', authMiddleware, teacherAuth, async (req, res) => {
-  try {
+   try {
     const { branch, section } = req.params;
-    const className = `${branch}-${section}`;
-
+     const className = `${branch}-${section}`;
+ 
     const count = await Student.countDocuments({ class: className });
-    res.json({ count });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
+     res.json({ count });
+   } catch (error) {
+     res.status(500).json({ message: 'Server error', error: error.message });
+   }
 });
-
 // Create Exam
 router.post('/exam/create', authMiddleware, teacherAuth, async (req, res) => {
   try {
