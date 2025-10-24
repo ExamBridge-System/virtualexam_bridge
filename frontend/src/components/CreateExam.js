@@ -9,39 +9,34 @@ const styles = {
   difficultySelector: {
     marginLeft: '12px',
     display: 'flex',
-    whiteSpace: 'nowrap',
+    gap: '8px', // Better spacing between buttons
   },
   difficultyLabel: {
     display: 'inline-flex',
     alignItems: 'center',
     cursor: 'pointer',
-    marginRight: '15px', // Spacing between options
-  },
-  difficultyRadio: (isChecked) => ({ // Function to handle checked state
-    appearance: 'none',
-    WebkitAppearance: 'none', // For Safari/Chrome
-    MozAppearance: 'none',    // For Firefox
-    width: '16px',
-    height: '16px',
-    // Change checked color here:
-    border: `1px solid ${isChecked ? '#2196F3' : '#ccc'}`, // Use blue border when checked
-    borderRadius: '3px',
-    marginRight: '5px',
-    position: 'relative',
-    outline: 'none',
+    padding: '6px 12px',
+    border: '1px solid #ccc',
+    borderRadius: '4px',
+    backgroundColor: 'white',
     transition: 'background-color 0.2s, border-color 0.2s',
-    // Change checked color here:
-    backgroundColor: isChecked ? '#2196F3' : 'white', // Use blue background when checked
-  }),
-  // Checkmark style (positioning might need minor tweaks)
-  checkmark: {
-    position: 'absolute',
-    top: '0px',
-    left: '2px',
-    fontSize: '12px',
-    color: 'white', // Checkmark color
-    lineHeight: 1,
+    fontSize: '14px',
+    fontWeight: '500',
   },
+  difficultyRadio: (isChecked) => ({
+    appearance: 'none',
+    WebkitAppearance: 'none',
+    MozAppearance: 'none',
+    width: '0',
+    height: '0',
+    position: 'absolute',
+    opacity: 0,
+  }),
+  difficultyButton: (isChecked) => ({
+    backgroundColor: isChecked ? '#2196F3' : 'white',
+    color: isChecked ? 'white' : '#333',
+    borderColor: isChecked ? '#2196F3' : '#ccc',
+  }),
   // Style for the cancel button
   cancelButtonStyle: {
     flex: 1,
@@ -70,7 +65,7 @@ function CreateExam() {
     subject: '',
     batch: selectedBatch,
     numberOfStudents: '',
-    scheduledDate: '',
+    scheduledDate: new Date().toISOString().split('T')[0], // Default to today's date
     scheduledTime: '',
     duration: '',
   });
@@ -92,8 +87,10 @@ function CreateExam() {
 
   const fetchSemesters = async (date) => {
     if (date) {
+      console.log('Fetching semesters for date:', date);
       try {
         const response = await api.get(`/teacher/semesters/${date}`);
+        console.log('Semesters response:', response.data);
         const semesters = response.data.semesters;
         if (semesters.length === 1) {
           setFormData(prev => ({ ...prev, semester: semesters[0] }));
@@ -109,7 +106,11 @@ function CreateExam() {
     if (date && semester) {
       try {
         const response = await api.get(`/teacher/branches/${date}/${semester}`);
-        setExamOptions(prev => ({ ...prev, branches: response.data.branches }));
+        const branches = response.data.branches;
+        if (branches.length === 1) {
+          setFormData(prev => ({ ...prev, branch: branches[0] }));
+        }
+        setExamOptions(prev => ({ ...prev, branches }));
       } catch (error) {
         console.error('Error fetching branches:', error);
       }
@@ -120,7 +121,11 @@ function CreateExam() {
     if (date && semester && branch) {
       try {
         const response = await api.get(`/teacher/sections/${date}/${semester}/${branch}`);
-        setExamOptions(prev => ({ ...prev, sections: { ...prev.sections, [branch]: response.data.sections } }));
+        const sections = response.data.sections;
+        if (sections.length === 1) {
+          setFormData(prev => ({ ...prev, section: sections[0] }));
+        }
+        setExamOptions(prev => ({ ...prev, sections: { ...prev.sections, [branch]: sections } }));
       } catch (error) {
         console.error('Error fetching sections:', error);
       }
@@ -131,9 +136,30 @@ function CreateExam() {
     if (date && semester && branch && section) {
       try {
         const response = await api.get(`/teacher/subjects/${date}/${semester}/${branch}/${section}`);
-        setExamOptions(prev => ({ ...prev, subjects: { ...prev.subjects, [`${branch}-${section}`]: response.data.subjects } }));
+        const subjects = response.data.subjects;
+        if (subjects.length === 1) {
+          setFormData(prev => ({ ...prev, subject: subjects[0] }));
+        }
+        setExamOptions(prev => ({ ...prev, subjects: { ...prev.subjects, [`${branch}-${section}`]: subjects } }));
       } catch (error) {
         console.error('Error fetching subjects:', error);
+      }
+    }
+  };
+
+  const fetchBatch = async (date, semester, branch, section, subject) => {
+    if (date && semester && branch && section && subject) {
+      try {
+        const response = await api.get(`/teacher/batch/${date}/${semester}/${branch}/${section}/${encodeURIComponent(subject)}`);
+        const batch = response.data.batch;
+        if (batch) {
+          setFormData(prev => ({ ...prev, batch }));
+        } else {
+          setFormData(prev => ({ ...prev, batch: '' }));
+        }
+      } catch (error) {
+        console.error('Error fetching batch:', error);
+        setFormData(prev => ({ ...prev, batch: '' }));
       }
     }
   };
@@ -162,6 +188,31 @@ function CreateExam() {
     }
   }, [formData.scheduledDate, formData.semester, formData.branch, formData.section]);
 
+  // Auto-select single options
+  useEffect(() => {
+    if (examOptions.branches.length === 1 && !formData.branch) {
+      setFormData(prev => ({ ...prev, branch: examOptions.branches[0] }));
+    }
+  }, [examOptions.branches]);
+
+  useEffect(() => {
+    if (formData.branch && examOptions.sections[formData.branch]?.length === 1 && !formData.section) {
+      setFormData(prev => ({ ...prev, section: examOptions.sections[formData.branch][0] }));
+    }
+  }, [examOptions.sections, formData.branch]);
+
+  useEffect(() => {
+    if (formData.branch && formData.section && examOptions.subjects[`${formData.branch}-${formData.section}`]?.length === 1 && !formData.subject) {
+      setFormData(prev => ({ ...prev, subject: examOptions.subjects[`${formData.branch}-${formData.section}`][0] }));
+    }
+  }, [examOptions.subjects, formData.branch, formData.section]);
+
+  useEffect(() => {
+    if (formData.scheduledDate && formData.semester && formData.branch && formData.section && formData.subject) {
+      fetchBatch(formData.scheduledDate, formData.semester, formData.branch, formData.section, formData.subject);
+    }
+  }, [formData.scheduledDate, formData.semester, formData.branch, formData.section, formData.subject]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -180,15 +231,7 @@ function CreateExam() {
       setFormData(prev => ({ ...prev, subject: '', batch: '' }));
       setExamOptions(prev => ({ ...prev, subjects: {} }));
     } else if (name === 'subject') {
-      // Auto-set batch if subject contains LAB
-      if (value && value.toLowerCase().includes('lab')) {
-        const date = new Date(formData.scheduledDate);
-        const day = date.getDate();
-        const autoBatch = day % 2 === 0 ? 'B1' : 'B2';
-        setFormData(prev => ({ ...prev, batch: autoBatch }));
-      } else {
-        setFormData(prev => ({ ...prev, batch: '' }));
-      }
+      // Batch is now auto-filled via API call in useEffect
     }
   };
 
@@ -324,70 +367,74 @@ function CreateExam() {
           <h2 style={{ marginBottom: '30px', textAlign: 'center' }}>Create Exam</h2>
           <form onSubmit={handleSubmit}>
             <fieldset disabled={bulkOpen}>
-              {/* Exam Form Groups */}
+              {/* Exam Form Groups - Reordered for logical flow */}
               <div className="form-group">
                 <label>Exam Name</label>
-                <input type="text" name="examName" value={formData.examName} onChange={handleChange} required placeholder="e.g., Mid-Term Exam" />
-              </div>
-              <div className="form-group">
-                <label>Scheduled Date</label>
-                <input type="date" name="scheduledDate" value={formData.scheduledDate} onChange={handleChange} required />
+                <input type="text" name="examName" value={formData.examName} onChange={handleChange} required placeholder="e.g., Mid-Term Exam" style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <div className="form-group" style={{ flex: 1 }}>
+                  <label>Scheduled Date</label>
+                  <input type="date" name="scheduledDate" value={formData.scheduledDate} onChange={handleChange} required style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Scheduled Time</label>
+                  <input type="time" name="scheduledTime" value={formData.scheduledTime} onChange={handleChange} required style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Duration (in minutes)</label>
+                  <input type="number" name="duration" value={formData.duration} onChange={handleChange} required min="1" placeholder="e.g., 60" style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
                   <label>Semester</label>
-                  <select name="semester" value={formData.semester} onChange={handleChange} required disabled={!formData.scheduledDate}>
+                  <select name="semester" value={formData.semester} onChange={handleChange} required disabled={!formData.scheduledDate} style={{ padding: '10px', height: '40px', fontSize: '16px' }}>
                     <option value="">-- Select --</option>
                     {examOptions.semesters.map(semester => (
                       <option key={semester} value={semester}>{semester}</option>
                     ))}
                   </select>
                 </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Branch</label>
-                  <select name="branch" value={formData.branch} onChange={handleChange} required disabled={!formData.semester}>
+                  <select name="branch" value={formData.branch} onChange={handleChange} required disabled={!formData.semester} style={{ padding: '10px', height: '40px', fontSize: '16px' }}>
                     <option value="">-- Select --</option>
                     {examOptions.branches.map(branch => (
                       <option key={branch} value={branch}>{branch}</option>
                     ))}
                   </select>
                 </div>
-              </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Section</label>
-                  <select name="section" value={formData.section} onChange={handleChange} required disabled={!formData.branch}>
+                  <select name="section" value={formData.section} onChange={handleChange} required disabled={!formData.branch} style={{ padding: '10px', height: '40px', fontSize: '16px' }}>
                     <option value="">-- Select --</option>
                     {formData.branch && examOptions.sections[formData.branch]?.map(section => (
                       <option key={section} value={section}>{section}</option>
                     ))}
                   </select>
                 </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Subject</label>
-                  <select name="subject" value={formData.subject} onChange={handleChange} required disabled={!formData.section}>
+                  <select name="subject" value={formData.subject} onChange={handleChange} required disabled={!formData.section} style={{ padding: '10px', height: '40px', fontSize: '16px' }}>
                     <option value="">-- Select --</option>
                     {formData.section && examOptions.subjects[`${formData.branch}-${formData.section}`]?.map(subject => (
                       <option key={subject} value={subject}>{subject}</option>
                     ))}
                   </select>
                 </div>
-              </div>
-              <div className="form-group">
-                <label>Batch</label>
-                <input type="text" name="batch" value={formData.batch} onChange={handleChange} placeholder="e.g., B1 (Auto-filled for LAB subjects)"/>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Batch</label>
+                  <input type="text" name="batch" value={formData.batch} onChange={handleChange} placeholder="e.g., B1 (Auto-filled for LAB subjects)" style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
+                </div>
               </div>
               <div className="form-group">
                 <label>Number of Students</label>
-                <input type="number" name="numberOfStudents" value={formData.numberOfStudents} onChange={handleChange} required min="1" placeholder="Enter number of students" />
-              </div>
-              <div className="form-group">
-                <label>Scheduled Time</label>
-                <input type="time" name="scheduledTime" value={formData.scheduledTime} onChange={handleChange} required />
-              </div>
-              <div className="form-group">
-                <label>Duration (in minutes)</label>
-                <input type="number" name="duration" value={formData.duration} onChange={handleChange} required min="1" placeholder="e.g., 60" />
+                <input type="number" name="numberOfStudents" value={formData.numberOfStudents} onChange={handleChange} required min="1" placeholder="Enter number of students" style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
               </div>
             </fieldset>
 

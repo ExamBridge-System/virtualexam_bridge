@@ -29,12 +29,18 @@ router.get('/semesters/:date', authMiddleware, teacherAuth, async (req, res) => 
       return res.status(404).json({ message: 'Teacher not found' });
     }
 
+    console.log('Teacher found:', teacher.teacherId, teacher.email);
+    console.log('Teacher timetable:', teacher.timetable);
+
     // Get day of the week for the given date
     const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const givenDate = new Date(date);
     const dayOfWeek = daysOfWeek[givenDate.getDay()];
+    console.log('Given date:', date, 'Day of week:', dayOfWeek);
+
     // Get timetable slots for that day
     const slots = teacher.timetable[dayOfWeek] || [];
+    console.log('Slots for day:', slots);
 
     // Extract unique semesters
     const semesters = new Set();
@@ -44,7 +50,6 @@ router.get('/semesters/:date', authMiddleware, teacherAuth, async (req, res) => 
       }
     });
 
-    console.log(`Teacher ${req.user.id} - Day: ${dayOfWeek}, Slots:`, slots);
     console.log('Semesters found:', Array.from(semesters));
 
     res.json({ semesters: Array.from(semesters) });
