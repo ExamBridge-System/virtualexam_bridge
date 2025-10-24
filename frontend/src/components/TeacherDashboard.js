@@ -179,11 +179,8 @@ function TeacherDashboard() {
 
         {/* Teacher Information Section */}
         <div className="card">
-<<<<<<< HEAD
-          <h2>Teacher Information</h2>
-=======
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2>Teacher Details</h2>
+            <h2>Teacher Information</h2>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
                 onClick={() => setShowPasswordChange(true)}
@@ -202,7 +199,6 @@ function TeacherDashboard() {
             </div>
           </div>
 
->>>>>>> origin/dev
           <div className="info-box">
             <p><strong> Full Name:</strong> {user?.name}</p>
             <p><strong> Teacher ID:</strong> {user?.teacherId}</p>
