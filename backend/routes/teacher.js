@@ -1,11 +1,22 @@
 const express = require('express');
+const nodemailer = require('nodemailer');
 const Exam = require('../models/Exam');
 const Question = require('../models/Question');
 const StudentExam = require('../models/StudentExam');
 const Student = require('../models/Student');
+const Teacher = require('../models/Teacher');
 const { authMiddleware, teacherAuth } = require('../middleware/auth');
 
 const router = express.Router();
+
+// Configure nodemailer transporter (uses EMAIL_USER/EMAIL_PASS in .env)
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 // Get teacher's classes
 router.get('/classes', authMiddleware, teacherAuth, async (req, res) => {
@@ -156,6 +167,92 @@ router.get('/submission/:submissionId', authMiddleware, teacherAuth, async (req,
     res.json({ submission });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// =====================
+// Teacher: Email Change Routes
+// =====================
+
+// Send verification code to new email (teacher)
+router.post('/send-verification-code', authMiddleware, teacherAuth, async (req, res) => {
+  try {
+    const { newEmail } = req.body;
+    if (!newEmail) return res.status(400).json({ message: 'New email is required' });
+
+    // Check if email already exists among teachers or students
+    const existingTeacher = await Teacher.findOne({ email: newEmail });
+    const existingStudent = await Student.findOne({ email: newEmail });
+    if ((existingTeacher && existingTeacher._id.toString() !== req.user.id) || existingStudent) {
+      return res.status(400).json({ message: 'Email already in use' });
+    }
+
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    global.emailVerificationCodes = global.emailVerificationCodes || {};
+    global.emailVerificationCodes[newEmail] = {
+      code: verificationCode,
+      teacherId: req.user.id,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+    };
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: newEmail,
+      subject: 'Email Verification Code - Virtual Exam Bridge',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Email Verification</h2>
+          <p>Your verification code is:</p>
+          <h1 style="color: #007bff; font-size: 32px; letter-spacing: 5px;">${verificationCode}</h1>
+          <p>This code will expire in 10 minutes.</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Teacher email verification code for ${newEmail}: ${verificationCode}`);
+
+    res.json({ message: 'Verification code sent to your new email address' });
+  } catch (error) {
+    console.error('Error sending verification code (teacher):', error);
+    res.status(500).json({ message: 'Failed to send verification code', error: error.message });
+  }
+});
+
+// Verify code and update teacher email
+router.post('/verify-email', authMiddleware, teacherAuth, async (req, res) => {
+  try {
+    const { newEmail, code } = req.body;
+    if (!newEmail || !code) return res.status(400).json({ message: 'New email and code are required' });
+
+    if (!global.emailVerificationCodes || !global.emailVerificationCodes[newEmail]) {
+      return res.status(400).json({ message: 'No verification code found for this email' });
+    }
+
+    const verificationData = global.emailVerificationCodes[newEmail];
+    if (verificationData.teacherId !== req.user.id) {
+      return res.status(403).json({ message: 'Verification code not for this user' });
+    }
+    if (Date.now() > verificationData.expiresAt) {
+      delete global.emailVerificationCodes[newEmail];
+      return res.status(400).json({ message: 'Verification code has expired' });
+    }
+    if (verificationData.code !== code) {
+      return res.status(400).json({ message: 'Invalid verification code' });
+    }
+
+    const teacher = await Teacher.findById(req.user.id);
+    if (!teacher) return res.status(404).json({ message: 'Teacher not found' });
+
+    teacher.email = newEmail;
+    await teacher.save();
+
+    delete global.emailVerificationCodes[newEmail];
+
+    res.json({ message: 'Email updated successfully' });
+  } catch (error) {
+    console.error('Error verifying teacher email:', error);
+    res.status(500).json({ message: 'Failed to verify email', error: error.message });
   }
 });
 
