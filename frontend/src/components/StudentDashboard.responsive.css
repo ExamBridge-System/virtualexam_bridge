@@ -1,0 +1,52 @@
+/* Media Queries for Responsive Design */
+@media screen and (max-width: 1200px) {
+  .exams-grid {
+    gap: 1rem;
+  }
+  
+  .exam-panel {
+    padding: 1.25rem;
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  .dashboard-container {
+    padding: 1rem;
+  }
+  
+  .exams-grid {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .exam-panel {
+    max-width: 100%;
+    min-height: auto;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .navbar {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .navbar-right {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-hero {
+    padding: 1.5rem;
+  }
+  
+  .dashboard-hero h1 {
+    font-size: 1.5rem;
+  }
+}

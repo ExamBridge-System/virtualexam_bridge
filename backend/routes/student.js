@@ -2,9 +2,11 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const nodemailer = require('nodemailer');
 const Exam = require('../models/Exam');
 const StudentExam = require('../models/StudentExam');
 const Question = require('../models/Question');
+const Student = require('../models/Student');
 const { authMiddleware, studentAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -396,6 +398,122 @@ router.get('/exam/:examId/status', authMiddleware, studentAuth, async (req, res)
     console.error('Error getting exam status:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
+});
+
+// Configure nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: 'gmail', // or your email service
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
+// Send verification code to new email
+router.post('/send-verification-code', authMiddleware, studentAuth, async (req, res) => {
+  try {
+    const { newEmail } = req.body;
+
+    if (!newEmail) {
+      return res.status(400).json({ message: 'New email is required' });
+    }
+
+    // Check if email is already taken by another student
+    const existingStudent = await Student.findOne({ email: newEmail });
+    if (existingStudent && existingStudent._id.toString() !== req.user.id) {
+      return res.status(400).json({ message: 'Email already in use by another student' });
+    }
+
+    // Generate 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store code temporarily (in production, use Redis or database)
+    // For now, we'll store in memory - in production, use proper storage
+    global.emailVerificationCodes = global.emailVerificationCodes || {};
+    global.emailVerificationCodes[newEmail] = {
+      code: verificationCode,
+      studentId: req.user.id,
+      expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes
+    };
+
+    // Log the verification code for server-side testing/debugging
+    console.log(`Verification code for ${newEmail}: ${verificationCode}`);
+
+    // ----------------------------------------------------
+    // FIX: UNCOMMENTED AND CLEANED UP EMAIL SENDING BLOCK
+    // ----------------------------------------------------
+    const mailOptions = {
+      from: process.env.EMAIL_USER, // Sender email from .env
+      to: newEmail, // Recipient email from request body
+      subject: 'Email Verification Code - Virtual Exam Bridge',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Email Verification</h2>
+          <p>You requested to change your email address in Virtual Exam Bridge.</p>
+          <p>Your verification code is:</p>
+          <h1 style="color: #007bff; font-size: 32px; letter-spacing: 5px;">${verificationCode}</h1>
+          <p>This code will expire in 10 minutes.</p>
+          <p>If you didn't request this change, please ignore this email.</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    // ----------------------------------------------------
+
+    res.json({ message: 'Verification code sent to your new email address' });
+  } catch (error) {
+    console.error('Error sending verification code:', error);
+    res.status(500).json({ message: 'Failed to send verification code', error: error.message });
+  }
+});
+
+// Verify code and update email
+router.post('/verify-email', authMiddleware, studentAuth, async (req, res) => {
+  try {
+    const { newEmail, code } = req.body;
+
+    if (!newEmail || !code) {
+      return res.status(400).json({ message: 'New email and verification code are required' });
+    }
+
+    // Check if code exists and is valid
+    if (!global.emailVerificationCodes || !global.emailVerificationCodes[newEmail]) {
+      return res.status(400).json({ message: 'No verification code found for this email' });
+    }
+
+    const verificationData = global.emailVerificationCodes[newEmail];
+
+    if (verificationData.studentId !== req.user.id) {
+      return res.status(403).json({ message: 'Verification code not for this user' });
+    }
+
+    if (Date.now() > verificationData.expiresAt) {
+      delete global.emailVerificationCodes[newEmail];
+      return res.status(400).json({ message: 'Verification code has expired' });
+    }
+
+    if (verificationData.code !== code) {
+      return res.status(400).json({ message: 'Invalid verification code' });
+    }
+
+    // Update student's email
+    const student = await Student.findById(req.user.id);
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    student.email = newEmail;
+    await student.save();
+
+    // Clean up verification code
+    delete global.emailVerificationCodes[newEmail];
+
+    res.json({ message: 'Email updated successfully' });
+  } catch (error) {
+    console.error('Error verifying email:', error);
+    res.status(500).json({ message: 'Failed to verify email', error: error.message });
+  }
 });
 
 module.exports = router;

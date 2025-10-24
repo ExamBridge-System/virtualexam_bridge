@@ -9,6 +9,23 @@ function TeacherDashboard() {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Modals & feedback
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalMessage, setModalMessage] = useState('');
+
+  // Email change states
+  const [showEmailChange, setShowEmailChange] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [emailChangeStep, setEmailChangeStep] = useState(1);
+
+  // Password change states
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
     fetchExams();
@@ -50,6 +67,89 @@ function TeacherDashboard() {
     );
   };
 
+  // Reusable Error/Info Modal
+  const ErrorModal = ({ isOpen, title, message, onClose }) => {
+    if (!isOpen) return null;
+    return (
+      <div className="modal-overlay">
+        <div className="modal-content">
+          <h3 style={{ marginBottom: '10px' }}>{title}</h3>
+          <p style={{ marginBottom: '15px' }}>{message}</p>
+          <button onClick={onClose} className="btn btn-primary" style={{ width: '100%' }}>OK</button>
+        </div>
+      </div>
+    );
+  };
+
+  // Send verification code to new teacher email
+  const handleSendVerificationCode = async () => {
+    try {
+      if (!newEmail.trim()) {
+        setModalTitle('Error');
+        setModalMessage('Please enter a valid email');
+        setIsModalOpen(true);
+        return;
+      }
+      await api.post('/teacher/send-verification-code', { newEmail });
+      setModalTitle('Code Sent');
+      setModalMessage('A verification code has been sent to your new email address.');
+      setIsModalOpen(true);
+      setEmailChangeStep(2);
+    } catch (err) {
+      setModalTitle('Error');
+      setModalMessage(err.response?.data?.message || 'Failed to send verification code');
+      setIsModalOpen(true);
+    }
+  };
+
+  // Verify teacher email and update
+  const handleVerifyEmail = async () => {
+    try {
+      await api.post('/teacher/verify-email', { newEmail, code: verificationCode });
+      setModalTitle('Success');
+      setModalMessage('Email updated successfully');
+      setIsModalOpen(true);
+      setShowEmailChange(false);
+      setNewEmail('');
+      setVerificationCode('');
+      setEmailChangeStep(1);
+      window.location.reload();
+    } catch (err) {
+      setModalTitle('Error');
+      setModalMessage(err.response?.data?.message || 'Verification failed');
+      setIsModalOpen(true);
+    }
+  };
+
+  // Change password for teacher
+  const handleChangePassword = async () => {
+    setPasswordError('');
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError('New password and confirmation do not match.');
+      return;
+    }
+    if (!oldPassword || !newPassword || !confirmNewPassword) {
+      setPasswordError('All fields are required.');
+      return;
+    }
+
+    try {
+      await api.post('/auth/change-password', { oldPassword, newPassword, confirmPassword: confirmNewPassword });
+      setModalTitle('Success');
+      setModalMessage('Password updated successfully. Please log in with your new password.');
+      setIsModalOpen(true);
+      setShowPasswordChange(false);
+      logout();
+      navigate('/login');
+    } catch (err) {
+      setPasswordError(err.response?.data?.message || 'Failed to update password');
+    } finally {
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+    }
+  };
+
   return (
     <div style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* Navbar */}
@@ -79,7 +179,30 @@ function TeacherDashboard() {
 
         {/* Teacher Information Section */}
         <div className="card">
+<<<<<<< HEAD
           <h2>Teacher Information</h2>
+=======
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2>Teacher Details</h2>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => setShowPasswordChange(true)}
+                className="btn btn-secondary"
+                style={{ fontSize: '14px', padding: '8px 16px' }}
+              >
+                Change Password
+              </button>
+              <button
+                onClick={() => setShowEmailChange(true)}
+                className="btn btn-secondary"
+                style={{ fontSize: '14px', padding: '8px 16px' }}
+              >
+                Change Email
+              </button>
+            </div>
+          </div>
+
+>>>>>>> origin/dev
           <div className="info-box">
             <p><strong> Full Name:</strong> {user?.name}</p>
             <p><strong> Teacher ID:</strong> {user?.teacherId}</p>
@@ -284,6 +407,62 @@ function TeacherDashboard() {
           </div>
         );
       })()}
+
+      {/* Modals */}
+      <ErrorModal isOpen={isModalOpen} title={modalTitle} message={modalMessage} onClose={() => setIsModalOpen(false)} />
+
+      {/* Email Change Modal */}
+      {showEmailChange && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '500px' }}>
+            <h3 style={{ marginBottom: '20px', color: '#2563eb' }}>{emailChangeStep === 1 ? 'Change Email Address' : 'Verify New Email'}</h3>
+            {emailChangeStep === 1 ? (
+              <>
+                <p style={{ marginBottom: '15px', color: '#6b7280' }}>Enter your new email address. A verification code will be sent to confirm the change.</p>
+                <input type="email" placeholder="New email address" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className="form-input" style={{ marginBottom: '20px' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <button onClick={() => setShowEmailChange(false)} className="btn btn-secondary">Cancel</button>
+                  <button onClick={handleSendVerificationCode} className="btn btn-primary" disabled={!newEmail.trim()}>Send Code</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p style={{ marginBottom: '15px', color: '#6b7280' }}>Enter the verification code sent to <strong>{newEmail}</strong></p>
+                <input type="text" placeholder="Verification code" value={verificationCode} onChange={(e) => setVerificationCode(e.target.value)} className="form-input" style={{ marginBottom: '20px' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <button onClick={() => { setEmailChangeStep(1); setVerificationCode(''); }} className="btn btn-secondary">Back</button>
+                  <button onClick={handleVerifyEmail} className="btn btn-primary" disabled={!verificationCode.trim()}>Verify & Update</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Password Change Modal */}
+      {showPasswordChange && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '400px' }}>
+            <h3 style={{ marginBottom: '20px', color: '#2563eb' }}>Change Password</h3>
+            {passwordError && <div className="error" style={{ marginBottom: '10px' }}>{passwordError}</div>}
+
+            <label>Old Password</label>
+            <input type="password" placeholder="Old Password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} className="form-input" style={{ marginBottom: '10px' }} />
+
+            <label>New Password</label>
+            <input type="password" placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="form-input" style={{ marginBottom: '10px' }} />
+
+            <label>Confirm New Password</label>
+            <input type="password" placeholder="Confirm New Password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} className="form-input" style={{ marginBottom: '20px' }} />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <button onClick={() => { setShowPasswordChange(false); setPasswordError(''); setOldPassword(''); setNewPassword(''); setConfirmNewPassword(''); }} className="btn btn-secondary">Cancel</button>
+              <button onClick={handleChangePassword} className="btn btn-primary">Update Password</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       </div>
     </div>
   );
