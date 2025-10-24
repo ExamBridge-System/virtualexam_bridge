@@ -243,10 +243,10 @@ function CreateExam() {
     }
   };
 
-  const fetchStudentCount = async (branch, section) => {
-    if (branch && section) {
+  const fetchStudentCount = async (batch, branch, section) => {
+    if (batch && branch && section) {
       try {
-        const response = await api.get(`/teacher/students-count/${branch}/${section}`);
+        const response = await api.get(`/teacher/students-count/${batch}/${branch}/${section}`);
         setFormData(prev => ({ ...prev, numberOfStudents: response.data.count }));
       } catch (error) {
         console.error('Error fetching student count:', error);
@@ -255,10 +255,10 @@ function CreateExam() {
   };
 
   useEffect(() => {
-    if (formData.branch && formData.section) {
-      fetchStudentCount(formData.branch, formData.section);
+    if (formData.batch && formData.branch && formData.section) {
+      fetchStudentCount(formData.batch, formData.branch, formData.section);
     }
-  }, [formData.branch, formData.section]);
+  }, [formData.batch, formData.branch, formData.section]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

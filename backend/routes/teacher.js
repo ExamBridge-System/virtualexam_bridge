@@ -254,12 +254,11 @@ router.get('/exam-options', authMiddleware, teacherAuth, async (req, res) => {
   }
 });
 
-router.get('/students-count/:branch/:section', authMiddleware, teacherAuth, async (req, res) => {
+router.get('/students-count/:batch/:branch/:section', authMiddleware, teacherAuth, async (req, res) => {
    try {
-    const { branch, section } = req.params;
-     const className = `${branch}-${section}`;
- 
-    const count = await Student.countDocuments({ class: className });
+    const { batch, branch, section } = req.params;
+
+    const count = await Student.countDocuments({ batch, branch, section });
      res.json({ count });
    } catch (error) {
      res.status(500).json({ message: 'Server error', error: error.message });
