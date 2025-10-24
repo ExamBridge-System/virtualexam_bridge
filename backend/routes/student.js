@@ -43,11 +43,16 @@ router.get('/exams', authMiddleware, studentAuth, async (req, res) => {
     const student = await Student.findById(req.user.id);
 
     const exams = await Exam.find({
-      class: student.class,
-      $or: [
-        { batch: { $exists: false } },
-        { batch: null },
-        { batch: student.batch }
+      $and: [
+        { branch: student.branch },
+        { section: student.section },
+        {
+          $or: [
+            { batch: { $exists: false } },
+            { batch: null },
+            { batch: student.batch }
+          ]
+        }
       ]
     }).sort({ scheduledDate: -1 });
 
@@ -70,7 +75,7 @@ router.get('/exam/:examId/access', authMiddleware, studentAuth, async (req, res)
     const Student = require('../models/Student');
     const student = await Student.findById(req.user.id);
 
-    if (exam.class !== student.class || (exam.batch && exam.batch !== student.batch)) {
+    if ((exam.branch !== student.branch || exam.section !== student.section) || (exam.batch && exam.batch !== student.batch)) {
       return res.status(403).json({ message: 'Not enrolled in this class or batch' });
     }
 

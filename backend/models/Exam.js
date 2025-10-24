@@ -5,7 +5,19 @@ const examSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  class: {
+  semester: {
+    type: String,
+    required: true,
+  },
+  branch: {
+    type: String,
+    required: true,
+  },
+  section: {
+    type: String,
+    required: true,
+  },
+  subject: {
     type: String,
     required: true,
   },

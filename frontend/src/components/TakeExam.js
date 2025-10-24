@@ -182,7 +182,7 @@ function TakeExam() {
             <div style={{ background: '#f7fafc', padding: '20px', borderRadius: '8px' }}>
               <h3>{exam.examName}</h3>
               <p style={{ color: '#718096', marginTop: '10px' }}>
-                <strong>Class:</strong> {exam.class}<br />
+                <strong>Class:</strong> {exam.branch}-{exam.section}<br />
                 <strong>Duration:</strong> {exam.duration} minutes<br />
                 <strong>Date:</strong> {new Date(exam.scheduledDate).toLocaleDateString()} at {exam.scheduledTime}
               </p>

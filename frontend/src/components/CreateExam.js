@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; // <-- Corrected import statement
+import React, { useState, useEffect } from 'react'; // <-- Corrected import statement
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
@@ -64,12 +64,22 @@ function CreateExam() {
 
   const [formData, setFormData] = useState({
     examName: '',
-    class: selectedClass,
+    semester: '',
+    branch: '',
+    section: '',
+    subject: '',
     batch: selectedBatch,
     numberOfStudents: '',
     scheduledDate: '',
     scheduledTime: '',
     duration: '',
+  });
+
+  const [examOptions, setExamOptions] = useState({
+    semesters: [],
+    branches: [],
+    sections: {},
+    subjects: {},
   });
 
   const [error, setError] = useState('');
@@ -80,13 +90,136 @@ function CreateExam() {
   const [parsedQuestions, setParsedQuestions] = useState([]);
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const fetchSemesters = async (date) => {
+    if (date) {
+      try {
+        const response = await api.get(`/teacher/semesters/${date}`);
+        const semesters = response.data.semesters;
+        if (semesters.length === 1) {
+          setFormData(prev => ({ ...prev, semester: semesters[0] }));
+        }
+        setExamOptions(prev => ({ ...prev, semesters }));
+      } catch (error) {
+        console.error('Error fetching semesters:', error);
+      }
+    }
   };
+
+  const fetchBranches = async (date, semester) => {
+    if (date && semester) {
+      try {
+        const response = await api.get(`/teacher/branches/${date}/${semester}`);
+        setExamOptions(prev => ({ ...prev, branches: response.data.branches }));
+      } catch (error) {
+        console.error('Error fetching branches:', error);
+      }
+    }
+  };
+
+  const fetchSections = async (date, semester, branch) => {
+    if (date && semester && branch) {
+      try {
+        const response = await api.get(`/teacher/sections/${date}/${semester}/${branch}`);
+        setExamOptions(prev => ({ ...prev, sections: { ...prev.sections, [branch]: response.data.sections } }));
+      } catch (error) {
+        console.error('Error fetching sections:', error);
+      }
+    }
+  };
+
+  const fetchSubjects = async (date, semester, branch, section) => {
+    if (date && semester && branch && section) {
+      try {
+        const response = await api.get(`/teacher/subjects/${date}/${semester}/${branch}/${section}`);
+        setExamOptions(prev => ({ ...prev, subjects: { ...prev.subjects, [`${branch}-${section}`]: response.data.subjects } }));
+      } catch (error) {
+        console.error('Error fetching subjects:', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (formData.scheduledDate) {
+      fetchSemesters(formData.scheduledDate);
+    }
+  }, [formData.scheduledDate]);
+
+  useEffect(() => {
+    if (formData.scheduledDate && formData.semester) {
+      fetchBranches(formData.scheduledDate, formData.semester);
+    }
+  }, [formData.scheduledDate, formData.semester]);
+
+  useEffect(() => {
+    if (formData.scheduledDate && formData.semester && formData.branch) {
+      fetchSections(formData.scheduledDate, formData.semester, formData.branch);
+    }
+  }, [formData.scheduledDate, formData.semester, formData.branch]);
+
+  useEffect(() => {
+    if (formData.scheduledDate && formData.semester && formData.branch && formData.section) {
+      fetchSubjects(formData.scheduledDate, formData.semester, formData.branch, formData.section);
+    }
+  }, [formData.scheduledDate, formData.semester, formData.branch, formData.section]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    // Reset dependent fields
+    if (name === 'scheduledDate') {
+      setFormData(prev => ({ ...prev, semester: '', branch: '', section: '', subject: '', batch: '' }));
+      setExamOptions(prev => ({ ...prev, semesters: [], branches: [], sections: {}, subjects: {} }));
+    } else if (name === 'semester') {
+      setFormData(prev => ({ ...prev, branch: '', section: '', subject: '', batch: '' }));
+      setExamOptions(prev => ({ ...prev, branches: [], sections: {}, subjects: {} }));
+    } else if (name === 'branch') {
+      setFormData(prev => ({ ...prev, section: '', subject: '', batch: '' }));
+      setExamOptions(prev => ({ ...prev, sections: {}, subjects: {} }));
+    } else if (name === 'section') {
+      setFormData(prev => ({ ...prev, subject: '', batch: '' }));
+      setExamOptions(prev => ({ ...prev, subjects: {} }));
+    } else if (name === 'subject') {
+      // Auto-set batch if subject contains LAB
+      if (value && value.toLowerCase().includes('lab')) {
+        const date = new Date(formData.scheduledDate);
+        const day = date.getDate();
+        const autoBatch = day % 2 === 0 ? 'B1' : 'B2';
+        setFormData(prev => ({ ...prev, batch: autoBatch }));
+      } else {
+        setFormData(prev => ({ ...prev, batch: '' }));
+      }
+    }
+  };
+
+  const fetchStudentCount = async (branch, section) => {
+    if (branch && section) {
+      try {
+        const response = await api.get(`/teacher/students-count/${branch}/${section}`);
+        setFormData(prev => ({ ...prev, numberOfStudents: response.data.count }));
+      } catch (error) {
+        console.error('Error fetching student count:', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (formData.branch && formData.section) {
+      fetchStudentCount(formData.branch, formData.section);
+    }
+  }, [formData.branch, formData.section]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(''); setSuccess(''); setLoading(true);
+
+    // Validate required fields
+    if (!formData.semester || !formData.subject) {
+      setError('Please select semester and subject before creating the exam.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await api.post('/exam/create', formData);
       setSuccess('Exam created successfully!');
@@ -147,6 +280,14 @@ function CreateExam() {
 
   const handleBulkSubmit = async () => {
     setBulkProcessing(true); setError(''); setSuccess('');
+
+    // Validate required fields
+    if (!formData.semester || !formData.subject) {
+      setError('Please select semester and subject before creating the exam.');
+      setBulkProcessing(false);
+      return;
+    }
+
     try {
       const response = await api.post('/exam/create', formData);
       const examId = response.data.exam._id;
@@ -189,29 +330,56 @@ function CreateExam() {
                 <input type="text" name="examName" value={formData.examName} onChange={handleChange} required placeholder="e.g., Mid-Term Exam" />
               </div>
               <div className="form-group">
-                <label>Class</label>
-                {selectedClass ? (
-                  <div style={{ padding: '10px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: '#f9f9f9' }}>{selectedClass}</div>
-                ) : (
-                  <select name="class" value={formData.class} onChange={handleChange} required>
-                    <option value="">-- Select Class --</option>
-                    {user?.classes && user.classes.map((cls, index) => (
-                      <option key={index} value={cls}>{cls}</option>
+                <label>Scheduled Date</label>
+                <input type="date" name="scheduledDate" value={formData.scheduledDate} onChange={handleChange} required />
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Semester</label>
+                  <select name="semester" value={formData.semester} onChange={handleChange} required disabled={!formData.scheduledDate}>
+                    <option value="">-- Select --</option>
+                    {examOptions.semesters.map(semester => (
+                      <option key={semester} value={semester}>{semester}</option>
                     ))}
                   </select>
-                )}
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Branch</label>
+                  <select name="branch" value={formData.branch} onChange={handleChange} required disabled={!formData.semester}>
+                    <option value="">-- Select --</option>
+                    {examOptions.branches.map(branch => (
+                      <option key={branch} value={branch}>{branch}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Section</label>
+                  <select name="section" value={formData.section} onChange={handleChange} required disabled={!formData.branch}>
+                    <option value="">-- Select --</option>
+                    {formData.branch && examOptions.sections[formData.branch]?.map(section => (
+                      <option key={section} value={section}>{section}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Subject</label>
+                  <select name="subject" value={formData.subject} onChange={handleChange} required disabled={!formData.section}>
+                    <option value="">-- Select --</option>
+                    {formData.section && examOptions.subjects[`${formData.branch}-${formData.section}`]?.map(subject => (
+                      <option key={subject} value={subject}>{subject}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="form-group">
                 <label>Batch</label>
-                <input type="text" name="batch" value={formData.batch} onChange={handleChange} placeholder="e.g., B1 (Optional)"/>
+                <input type="text" name="batch" value={formData.batch} onChange={handleChange} placeholder="e.g., B1 (Auto-filled for LAB subjects)"/>
               </div>
               <div className="form-group">
                 <label>Number of Students</label>
                 <input type="number" name="numberOfStudents" value={formData.numberOfStudents} onChange={handleChange} required min="1" placeholder="Enter number of students" />
-              </div>
-              <div className="form-group">
-                <label>Scheduled Date</label>
-                <input type="date" name="scheduledDate" value={formData.scheduledDate} onChange={handleChange} required />
               </div>
               <div className="form-group">
                 <label>Scheduled Time</label>

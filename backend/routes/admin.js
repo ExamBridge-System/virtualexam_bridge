@@ -80,6 +80,8 @@ router.post('/upload-teacher-timetable', authMiddleware, upload.single('timetabl
             subject: row.Subject,
             type: 'class', // Assuming all are class, or add type column if needed
             class: className,
+            Branch: row.Branch,
+            Section: row.Section,
             batches: row.Batches ? row.Batches.split(',') : undefined,
             semester: row.Semester,
           });
@@ -96,11 +98,17 @@ router.post('/upload-teacher-timetable', authMiddleware, upload.single('timetabl
         });
         const branchSection = Array.from(uniqueClasses);
 
+        // Generate email and password for teacher
+        const email = `${teacherId}@example.com`;
+        const hashedPassword = await bcrypt.hash('defaultpassword', 10); // Default password, can be changed later
+
         await Teacher.updateOne(
           { teacherId },
           {
             $set: {
               name,
+              email,
+              password: hashedPassword,
               department,
               branchSection,
               timetable

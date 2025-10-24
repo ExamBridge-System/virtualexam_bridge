@@ -18,14 +18,261 @@ router.get('/classes', authMiddleware, teacherAuth, async (req, res) => {
   }
 });
 
+// Get semesters for a given date
+router.get('/semesters/:date', authMiddleware, teacherAuth, async (req, res) => {
+  try {
+    const { date } = req.params;
+    const Teacher = require('../models/Teacher');
+
+    const teacher = await Teacher.findById(req.user.id);
+    if (!teacher) {
+      return res.status(404).json({ message: 'Teacher not found' });
+    }
+
+    // Get day of the week for the given date
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const givenDate = new Date(date);
+    const dayOfWeek = daysOfWeek[givenDate.getDay()];
+    // Get timetable slots for that day
+    const slots = teacher.timetable[dayOfWeek] || [];
+
+    // Extract unique semesters
+    const semesters = new Set();
+    slots.forEach(slot => {
+      if (slot.semester) {
+        semesters.add(slot.semester);
+      }
+    });
+
+    console.log(`Teacher ${req.user.id} - Day: ${dayOfWeek}, Slots:`, slots);
+    console.log('Semesters found:', Array.from(semesters));
+
+    res.json({ semesters: Array.from(semesters) });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get branches for a given date and semester
+router.get('/branches/:date/:semester', authMiddleware, teacherAuth, async (req, res) => {
+  try {
+    const { date, semester } = req.params;
+    const Teacher = require('../models/Teacher');
+
+    const teacher = await Teacher.findById(req.user.id);
+    if (!teacher) {
+      return res.status(404).json({ message: 'Teacher not found' });
+    }
+
+    // Get day of the week for the given date
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const givenDate = new Date(date);
+    const dayOfWeek = daysOfWeek[givenDate.getDay()];
+
+    // Get timetable slots for that day and semester
+    const slots = teacher.timetable[dayOfWeek] || [];
+    const filteredSlots = slots.filter(slot => slot.semester === semester);
+
+    // Extract unique branches
+    const branches = new Set();
+    filteredSlots.forEach(slot => {
+      if (slot.Branch) {
+        branches.add(slot.Branch);
+      }
+    });
+
+    res.json({ branches: Array.from(branches) });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get sections for a given date, semester, and branch
+router.get('/sections/:date/:semester/:branch', authMiddleware, teacherAuth, async (req, res) => {
+  try {
+    const { date, semester, branch } = req.params;
+    const Teacher = require('../models/Teacher');
+
+    const teacher = await Teacher.findById(req.user.id);
+    if (!teacher) {
+      return res.status(404).json({ message: 'Teacher not found' });
+    }
+
+    // Get day of the week for the given date
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const givenDate = new Date(date);
+    const dayOfWeek = daysOfWeek[givenDate.getDay()];
+
+    // Get timetable slots for that day, semester, and branch
+    const slots = teacher.timetable[dayOfWeek] || [];
+    const filteredSlots = slots.filter(slot => slot.semester === semester && slot.Branch === branch);
+
+    // Extract unique sections
+    const sections = new Set();
+    filteredSlots.forEach(slot => {
+      if (slot.Section) {
+        sections.add(slot.Section);
+      }
+    });
+
+    res.json({ sections: Array.from(sections) });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get subjects for a given date, semester, branch, and section
+router.get('/subjects/:date/:semester/:branch/:section', authMiddleware, teacherAuth, async (req, res) => {
+  try {
+    const { date, semester, branch, section } = req.params;
+    const Teacher = require('../models/Teacher');
+
+    const teacher = await Teacher.findById(req.user.id);
+    if (!teacher) {
+      return res.status(404).json({ message: 'Teacher not found' });
+    }
+
+    // Get day of the week for the given date
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const givenDate = new Date(date);
+    const dayOfWeek = daysOfWeek[givenDate.getDay()];
+
+    // Get timetable slots for that day, semester, branch, and section
+    const slots = teacher.timetable[dayOfWeek] || [];
+    const filteredSlots = slots.filter(slot => slot.semester === semester && slot.Branch === branch && slot.Section === section);
+
+    // Extract unique subjects
+    const subjects = new Set();
+    filteredSlots.forEach(slot => {
+      if (slot.subject) {
+        subjects.add(slot.subject);
+      }
+    });
+
+    res.json({ subjects: Array.from(subjects) });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get batch for a given date, semester, branch, section, and subject
+router.get('/batch/:date/:semester/:branch/:section/:subject', authMiddleware, teacherAuth, async (req, res) => {
+  try {
+    const { date, semester, branch, section, subject } = req.params;
+    const Teacher = require('../models/Teacher');
+
+    const teacher = await Teacher.findById(req.user.id);
+    if (!teacher) {
+      return res.status(404).json({ message: 'Teacher not found' });
+    }
+
+    // Get day of the week for the given date
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const givenDate = new Date(date);
+    const dayOfWeek = daysOfWeek[givenDate.getDay()];
+
+    // Get timetable slots for that day, semester, branch, section, and subject
+    const slots = teacher.timetable[dayOfWeek] || [];
+    const filteredSlots = slots.filter(slot => slot.semester === semester && slot.Branch === branch && slot.Section === section && slot.subject === subject);
+
+    // Get the batch from the first matching slot (assuming all slots for the same subject have the same batch)
+    let batch = '';
+    if (filteredSlots.length > 0 && filteredSlots[0].batches) {
+      batch = filteredSlots[0].batches;
+    }
+
+    res.json({ batch });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get teacher's available options for exam creation (legacy endpoint)
+router.get('/exam-options', authMiddleware, teacherAuth, async (req, res) => {
+  try {
+    const Teacher = require('../models/Teacher');
+    const Student = require('../models/Student');
+
+    const teacher = await Teacher.findById(req.user.id);
+    if (!teacher) {
+      return res.status(404).json({ message: 'Teacher not found' });
+    }
+
+    // Get current day of the week
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const today = new Date();
+    const currentDay = daysOfWeek[today.getDay()];
+
+    // Get today's timetable slots
+    const todaySlots = teacher.timetable[currentDay] || [];
+
+    // Extract unique branches, sections, and subjects
+    const branches = new Set();
+    const sectionsByBranch = {};
+    const subjectsByBranchSection = {};
+
+    todaySlots.forEach(slot => {
+      if (slot.Branch && slot.Section) {
+        branches.add(slot.Branch);
+
+        if (!sectionsByBranch[slot.Branch]) {
+          sectionsByBranch[slot.Branch] = new Set();
+        }
+        sectionsByBranch[slot.Branch].add(slot.Section);
+
+        const key = `${slot.Branch}-${slot.Section}`;
+        if (!subjectsByBranchSection[key]) {
+          subjectsByBranchSection[key] = new Set();
+        }
+        subjectsByBranchSection[key].add(slot.subject);
+      }
+    });
+
+    // Convert sets to arrays
+    const branchList = Array.from(branches);
+    const sectionList = {};
+    Object.keys(sectionsByBranch).forEach(branch => {
+      sectionList[branch] = Array.from(sectionsByBranch[branch]);
+    });
+    const subjectList = {};
+    Object.keys(subjectsByBranchSection).forEach(key => {
+      subjectList[key] = Array.from(subjectsByBranchSection[key]);
+    });
+
+    res.json({
+      branches: branchList,
+      sections: sectionList,
+      subjects: subjectList
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get number of students for a specific branch-section
+router.get('/students-count/:branch/:section', authMiddleware, teacherAuth, async (req, res) => {
+  try {
+    const { branch, section } = req.params;
+    const className = `${branch}-${section}`;
+
+    const count = await Student.countDocuments({ class: className });
+    res.json({ count });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Create Exam
 router.post('/exam/create', authMiddleware, teacherAuth, async (req, res) => {
   try {
-    const { examName, class: examClass, batch, numberOfStudents, scheduledDate, scheduledTime, duration } = req.body;
+    const { examName, semester, branch, section, subject, batch, numberOfStudents, scheduledDate, scheduledTime, duration } = req.body;
 
     const exam = new Exam({
       examName,
-      class: examClass,
+      semester,
+      branch,
+      section,
+      subject,
       batch: batch || undefined,
       teacherId: req.user.id,
       numberOfStudents,

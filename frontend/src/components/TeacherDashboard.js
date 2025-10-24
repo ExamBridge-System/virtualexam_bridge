@@ -134,7 +134,7 @@ function TeacherDashboard() {
                     <td><strong>{exam.examName}</strong></td>
                     <td>
                       <span className="badge badge-primary">
-                        {exam.class}
+                        {exam.branch}-{exam.section}
                       </span>
                     </td>
                     <td>{new Date(exam.scheduledDate).toLocaleDateString()}</td>
