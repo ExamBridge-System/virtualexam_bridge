@@ -7,6 +7,7 @@ const Exam = require('../models/Exam');
 const StudentExam = require('../models/StudentExam');
 const Question = require('../models/Question');
 const Student = require('../models/Student');
+const DistributionUsage = require('../models/DistributionUsage');
 const { authMiddleware, studentAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -36,6 +37,45 @@ const shuffleArray = (array) => {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
+};
+
+// Weighted random selection for distributions with more aggressive weighting
+const weightedRandomDistribution = (distributions) => {
+  // Use squared weighting for more aggressive bias reduction
+  const weights = distributions.map(d => 1 / Math.pow(d.usageCount + 1, 2));
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  let rand = Math.random() * totalWeight;
+
+  for (let i = 0; i < distributions.length; i++) {
+    rand -= weights[i];
+    if (rand <= 0) return distributions[i];
+  }
+};
+
+// Weighted random selection for questions with more aggressive weighting
+const weightedRandomSelect = (questions, count) => {
+  const result = [];
+  const availableQuestions = [...questions];
+
+  for (let i = 0; i < count; i++) {
+    if (availableQuestions.length === 0) break;
+
+    // Use squared weighting for more aggressive bias reduction
+    const weights = availableQuestions.map(q => 1 / Math.pow(q.usageCount + 1, 2));
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+    let rand = Math.random() * totalWeight;
+
+    for (let j = 0; j < availableQuestions.length; j++) {
+      rand -= weights[j];
+      if (rand <= 0) {
+        result.push(availableQuestions[j]);
+        availableQuestions.splice(j, 1);
+        break;
+      }
+    }
+  }
+
+  return result;
 };
 
 // Get available exams for student's class
@@ -111,9 +151,9 @@ router.post('/exam/:examId/generate-set', authMiddleware, studentAuth, async (re
     });
 
     if (studentExam && studentExam.setGenerated) {
-      return res.json({ 
-        message: 'Set already generated', 
-        questions: studentExam.assignedQuestions 
+      return res.json({
+        message: 'Set already generated',
+        questions: studentExam.assignedQuestions
       });
     }
 
@@ -122,73 +162,84 @@ router.post('/exam/:examId/generate-set', authMiddleware, studentAuth, async (re
       return res.status(404).json({ message: 'Exam not found' });
     }
 
-    // Get all questions by level
-    const easyQuestions = await Question.find({ examId, level: 'easy' });
-    const mediumQuestions = await Question.find({ examId, level: 'medium' });
-    const hardQuestions = await Question.find({ examId, level: 'hard' });
+    // Get all questions by level, sorted by usageCount ascending (least used first)
+    const easyQuestions = await Question.find({ examId, level: 'easy' }).sort({ usageCount: 1 });
+    const mediumQuestions = await Question.find({ examId, level: 'medium' }).sort({ usageCount: 1 });
+    const hardQuestions = await Question.find({ examId, level: 'hard' }).sort({ usageCount: 1 });
 
     // Get counts
     const easyCount = easyQuestions.length;
     const mediumCount = mediumQuestions.length;
     const hardCount = hardQuestions.length;
 
-    // Define possible random distributions
+    // Fetch usage stats for distributions
+    const usageData = await DistributionUsage.find({ examId });
+    const usageMap = {};
+    usageData.forEach(d => usageMap[d.type] = d.usageCount || 0);
+
+    // Define possible random distributions with usage counts
     const distributions = [
-      { easy: 3, medium: 0, hard: 0, desc: '3 Easy' },
-      { easy: 1, medium: 1, hard: 0, desc: '1 Easy, 1 Medium' },
-      { easy: 0, medium: 0, hard: 1, desc: '1 Hard' }
+      { easy: 3, medium: 0, hard: 0, desc: '3 Easy', usageCount: usageMap['3 Easy'] || 0 },
+      { easy: 1, medium: 1, hard: 0, desc: '1 Easy, 1 Medium', usageCount: usageMap['1 Easy, 1 Medium'] || 0 },
+      { easy: 0, medium: 0, hard: 1, desc: '1 Hard', usageCount: usageMap['1 Hard'] || 0 }
     ];
 
-    // Shuffle the distributions to randomize the order
-    const shuffledDistributions = shuffleArray(distributions);
+    // Use weighted random selection for distributions
+    const selectedDistribution = weightedRandomDistribution(distributions);
 
-    // Find the first distribution that can be satisfied
-    let selectedDistribution = null;
-    for (const dist of shuffledDistributions) {
-      if (dist.easy <= easyCount && dist.medium <= mediumCount && dist.hard <= hardCount) {
-        selectedDistribution = dist;
-        break;
-      }
-    }
+    // Update usage count for selected distribution
+    await DistributionUsage.updateOne(
+      { examId, type: selectedDistribution.desc },
+      { $inc: { usageCount: 1 } },
+      { upsert: true }
+    );
 
     if (!selectedDistribution) {
       return res.status(400).json({ message: 'Not enough questions available to generate a valid set. Please ensure there are sufficient questions in the required levels.' });
     }
 
     const selectedQuestions = [];
-    
-    // Select easy questions
-    // Use slice() on the shuffled array to safely select up to the requested count
-    const shuffledEasy = shuffleArray(easyQuestions);
-    const easySelection = shuffledEasy.slice(0, selectedDistribution.easy);
-    easySelection.forEach(q => selectedQuestions.push({
+
+    // Select easy questions using weighted random selection
+    const easySelection = weightedRandomSelect(easyQuestions, selectedDistribution.easy);
+    easySelection.forEach(q => {
+      selectedQuestions.push({
         questionId: q._id,
         questionText: q.questionText,
         level: q.level,
-    }));
+      });
+      // Increment usage count
+      q.usageCount += 1;
+      q.save();
+    });
 
-    // Select medium questions
-    const shuffledMedium = shuffleArray(mediumQuestions);
-    const mediumSelection = shuffledMedium.slice(0, selectedDistribution.medium);
-    mediumSelection.forEach(q => selectedQuestions.push({
+    // Select medium questions using weighted random selection
+    const mediumSelection = weightedRandomSelect(mediumQuestions, selectedDistribution.medium);
+    mediumSelection.forEach(q => {
+      selectedQuestions.push({
         questionId: q._id,
         questionText: q.questionText,
         level: q.level,
-    }));
+      });
+      // Increment usage count
+      q.usageCount += 1;
+      q.save();
+    });
 
-
-    // Select hard questions
-    const shuffledHard = shuffleArray(hardQuestions);
-    const hardSelection = shuffledHard.slice(0, selectedDistribution.hard);
-    hardSelection.forEach(q => selectedQuestions.push({
+    // Select hard questions using weighted random selection
+    const hardSelection = weightedRandomSelect(hardQuestions, selectedDistribution.hard);
+    hardSelection.forEach(q => {
+      selectedQuestions.push({
         questionId: q._id,
         questionText: q.questionText,
         level: q.level,
-    }));
-    // --- END FIX ---
+      });
+      // Increment usage count
+      q.usageCount += 1;
+      q.save();
+    });
 
-
-    // Ensure at least one question was selected. This prevents a silent failure if 
+    // Ensure at least one question was selected. This prevents a silent failure if
     // the chosen random distribution cannot be met by the available questions.
     if (selectedQuestions.length === 0) {
         return res.status(400).json({ message: 'Not enough questions available in the pool to generate a set.' });
@@ -217,9 +268,9 @@ router.post('/exam/:examId/generate-set', authMiddleware, studentAuth, async (re
 
     await studentExam.save();
 
-    res.json({ 
-      message: 'Question set generated successfully', 
-      questions: finalQuestions 
+    res.json({
+      message: 'Question set generated successfully',
+      questions: finalQuestions
     });
   } catch (error) {
     console.error('Error generating question set:', error);
