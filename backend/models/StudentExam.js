@@ -25,8 +25,9 @@ const studentExamSchema = new mongoose.Schema({
       ref: 'Question',
       required: true,
     },
+    url: String,
     filename: String,
-    path: String,
+    publicId: String, // Cloudinary public ID for deletion
     uploadedAt: {
       type: Date,
       default: Date.now,

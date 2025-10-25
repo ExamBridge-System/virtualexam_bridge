@@ -27,6 +27,7 @@ app.use((req, res, next) => {
 });
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
+// Removed static serve for screenshots since they are now in Cloudinary
 
 // Database Connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/internal-test-system', {

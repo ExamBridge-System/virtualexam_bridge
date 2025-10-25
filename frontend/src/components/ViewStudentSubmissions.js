@@ -244,7 +244,7 @@ function ViewStudentSubmissions() {
                                   transition: 'all 0.3s',
                                 }}
                                 onClick={() => setFullScreenImage({
-                                  url: `${BACKEND_URL}/uploads/screenshots/${screenshot.filename}`,
+                                  url: screenshot.url,
                                   filename: screenshot.filename,
                                   uploadedAt: screenshot.uploadedAt,
                                   index: sIndex + 1,
@@ -254,7 +254,7 @@ function ViewStudentSubmissions() {
                                 onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                               >
                                 <img
-                                  src={`${BACKEND_URL}/uploads/screenshots/${screenshot.filename}`}
+                                  src={screenshot.url}
                                   alt={`Screenshot ${sIndex + 1} for Question ${index + 1}`}
                                   style={{
                                     maxWidth: '100%',

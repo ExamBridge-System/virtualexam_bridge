@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 # TODO: Add Default Email and Change/Verify Option in Student Dashboard
 
 ## Backend Changes
@@ -17,10 +16,3 @@
 - [ ] Test email sending (configure SMTP)
 - [ ] Test email change flow in dashboard
 - [ ] Ensure forgot password can use the email later
-=======
-# TODO: Fix CSV Parsing Issue in CreateExam.js
-
-- [x] Modify handleParseCsv to always use fileInputRef.current.files[0] directly and sync csvFile state
-- [x] Update the "Clear" button onClick to reset the file input value
-- [x] Update the "Cancel Bulk Upload" button onClick to reset the file input value
->>>>>>> Stashed changes

@@ -3,12 +3,18 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
+const cloudinary = require('cloudinary').v2;
 const Exam = require('../models/Exam');
 const StudentExam = require('../models/StudentExam');
 const Question = require('../models/Question');
 const Student = require('../models/Student');
 const DistributionUsage = require('../models/DistributionUsage');
 const { authMiddleware, studentAuth } = require('../middleware/auth');
+
+// Configure Cloudinary
+cloudinary.config({
+  cloudinary_url: process.env.CLOUDINARY_URL,
+});
 
 const router = express.Router();
 
@@ -322,6 +328,16 @@ router.post('/exam/:examId/question/:questionId/upload', authMiddleware, student
       return res.status(403).json({ message: 'Question not assigned to you' });
     }
 
+    // Upload to Cloudinary
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'exam-screenshots',
+      public_id: `screenshot-${Date.now()}-${req.file.originalname.split('.')[0]}`,
+      resource_type: 'image',
+    });
+
+    // Remove temp file
+    fs.unlinkSync(req.file.path);
+
     // Ensure studentExam.screenshots is an array before pushing
     if (!studentExam.screenshots) {
         studentExam.screenshots = [];
@@ -329,18 +345,24 @@ router.post('/exam/:examId/question/:questionId/upload', authMiddleware, student
 
     studentExam.screenshots.push({
       questionId: questionId,
-      filename: req.file.filename,
-      path: req.file.path,
+      url: result.secure_url, // Cloudinary URL
+      filename: req.file.originalname,
+      publicId: result.public_id, // Store public ID for deletion
     });
 
     await studentExam.save();
 
     res.json({
       message: 'Screenshot uploaded successfully',
-      filename: req.file.filename
+      url: result.secure_url,
+      filename: req.file.originalname
     });
   } catch (error) {
     console.error('Error uploading screenshot:', error);
+    // Clean up temp file if upload failed
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -365,10 +387,15 @@ router.delete('/exam/:examId/question/:questionId/screenshot/:filename', authMid
             return res.status(404).json({ message: 'Screenshot not found for this question' });
         }
 
-        // Remove the file from the filesystem first (optional, but good practice)
-        const fileToRemove = studentExam.screenshots[screenshotIndex];
-        if (fileToRemove.path && fs.existsSync(fileToRemove.path)) {
-            fs.unlinkSync(fileToRemove.path);
+        // Delete from Cloudinary
+        const screenshot = studentExam.screenshots[screenshotIndex];
+        if (screenshot.publicId) {
+            try {
+                await cloudinary.uploader.destroy(screenshot.publicId);
+            } catch (cloudinaryError) {
+                console.error('Error deleting from Cloudinary:', cloudinaryError);
+                // Continue with database deletion even if Cloudinary deletion fails
+            }
         }
 
         // Remove the entry from the database array
