@@ -22,6 +22,7 @@ function StudentDashboard() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [isUsingDefaultPassword, setIsUsingDefaultPassword] = useState(false);
 
   useEffect(() => {
     fetchExams();

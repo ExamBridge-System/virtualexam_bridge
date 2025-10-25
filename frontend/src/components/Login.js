@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
+import reactLogo from '../assets/react.svg';
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -23,6 +24,7 @@ function Login() {
 
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [logoSrc, setLogoSrc] = useState(reactLogo);
 
   const handleChange = (e) => {
     setFormData({
@@ -114,9 +116,9 @@ function Login() {
   return (
     <div className="container" style={{ paddingTop: '60px' }}>
       <div className="card" style={{ maxWidth: '450px', margin: '0 auto', padding: '40px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
           <img
-            src="/logo192.png"
+            src={logoSrc}
             alt="CBIT Logo"
             style={{ width: '80px', height: '80px', marginBottom: '15px' }}
           />
