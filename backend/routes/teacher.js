@@ -193,8 +193,8 @@ router.get('/batch/:date/:semester/:branch/:section/:subject', authMiddleware, t
 
     // Get the batch from the first matching slot (assuming all slots for the same subject have the same batch)
     let batch = '';
-    if (filteredSlots.length > 0 && filteredSlots[0].batches) {
-      batch = filteredSlots[0].batches;
+    if (filteredSlots.length > 0 && filteredSlots[0].batches && Array.isArray(filteredSlots[0].batches)) {
+      batch = filteredSlots[0].batches[0] || '';
     }
 
     res.json({ batch });
