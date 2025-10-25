@@ -15,6 +15,10 @@ const questionSchema = new mongoose.Schema({
     enum: ['easy', 'medium', 'hard'],
     required: true,
   },
+  usageCount: {
+    type: Number,
+    default: 0,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

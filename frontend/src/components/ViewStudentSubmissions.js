@@ -58,7 +58,7 @@ function ViewStudentSubmissions() {
           <div className="card">
             <h3>{exam.examName}</h3>
             <p style={{ color: '#718096', marginTop: '10px' }}>
-              Class: {exam.class} | Date: {new Date(exam.scheduledDate).toLocaleDateString()} | 
+              Class: {exam.branch}-{exam.section} | Date: {new Date(exam.scheduledDate).toLocaleDateString()} |
               Time: {exam.scheduledTime}
             </p>
           </div>

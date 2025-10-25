@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; // <-- Corrected import statement
+import React, { useState, useEffect } from 'react'; // <-- Corrected import statement
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
@@ -9,39 +9,34 @@ const styles = {
   difficultySelector: {
     marginLeft: '12px',
     display: 'flex',
-    whiteSpace: 'nowrap',
+    gap: '8px', // Better spacing between buttons
   },
   difficultyLabel: {
     display: 'inline-flex',
     alignItems: 'center',
     cursor: 'pointer',
-    marginRight: '15px', // Spacing between options
-  },
-  difficultyRadio: (isChecked) => ({ // Function to handle checked state
-    appearance: 'none',
-    WebkitAppearance: 'none', // For Safari/Chrome
-    MozAppearance: 'none',    // For Firefox
-    width: '16px',
-    height: '16px',
-    // Change checked color here:
-    border: `1px solid ${isChecked ? '#2196F3' : '#ccc'}`, // Use blue border when checked
-    borderRadius: '3px',
-    marginRight: '5px',
-    position: 'relative',
-    outline: 'none',
+    padding: '6px 12px',
+    border: '1px solid #ccc',
+    borderRadius: '4px',
+    backgroundColor: 'white',
     transition: 'background-color 0.2s, border-color 0.2s',
-    // Change checked color here:
-    backgroundColor: isChecked ? '#2196F3' : 'white', // Use blue background when checked
-  }),
-  // Checkmark style (positioning might need minor tweaks)
-  checkmark: {
-    position: 'absolute',
-    top: '0px',
-    left: '2px',
-    fontSize: '12px',
-    color: 'white', // Checkmark color
-    lineHeight: 1,
+    fontSize: '14px',
+    fontWeight: '500',
   },
+  difficultyRadio: (isChecked) => ({
+    appearance: 'none',
+    WebkitAppearance: 'none',
+    MozAppearance: 'none',
+    width: '0',
+    height: '0',
+    position: 'absolute',
+    opacity: 0,
+  }),
+  difficultyButton: (isChecked) => ({
+    backgroundColor: isChecked ? '#2196F3' : 'white',
+    color: isChecked ? 'white' : '#333',
+    borderColor: isChecked ? '#2196F3' : '#ccc',
+  }),
   // Style for the cancel button
   cancelButtonStyle: {
     flex: 1,
@@ -64,12 +59,22 @@ function CreateExam() {
 
   const [formData, setFormData] = useState({
     examName: '',
-    class: selectedClass,
+    semester: '',
+    branch: '',
+    section: '',
+    subject: '',
     batch: selectedBatch,
     numberOfStudents: '',
-    scheduledDate: '',
+    scheduledDate: new Date().toISOString().split('T')[0], // Default to today's date
     scheduledTime: '',
     duration: '',
+  });
+
+  const [examOptions, setExamOptions] = useState({
+    semesters: [],
+    branches: [],
+    sections: {},
+    subjects: {},
   });
 
   const [error, setError] = useState('');
@@ -80,13 +85,192 @@ function CreateExam() {
   const [parsedQuestions, setParsedQuestions] = useState([]);
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const fetchSemesters = async (date) => {
+    if (date) {
+      console.log('Fetching semesters for date:', date);
+      try {
+        const response = await api.get(`/teacher/semesters/${date}`);
+        console.log('Semesters response:', response.data);
+        const semesters = response.data.semesters;
+        if (semesters.length > 0) {
+          setFormData(prev => ({ ...prev, semester: semesters[0] }));
+        }
+        setExamOptions(prev => ({ ...prev, semesters }));
+      } catch (error) {
+        console.error('Error fetching semesters:', error);
+      }
+    }
   };
+
+  const fetchBranches = async (date, semester) => {
+    if (date && semester) {
+      try {
+        const response = await api.get(`/teacher/branches/${date}/${semester}`);
+        const branches = response.data.branches;
+        if (branches.length === 1) {
+          setFormData(prev => ({ ...prev, branch: branches[0] }));
+        }
+        setExamOptions(prev => ({ ...prev, branches }));
+      } catch (error) {
+        console.error('Error fetching branches:', error);
+      }
+    }
+  };
+
+  const fetchSections = async (date, semester, branch) => {
+    if (date && semester && branch) {
+      try {
+        const response = await api.get(`/teacher/sections/${date}/${semester}/${branch}`);
+        const sections = response.data.sections;
+        if (sections.length === 1) {
+          setFormData(prev => ({ ...prev, section: sections[0] }));
+        }
+        setExamOptions(prev => ({ ...prev, sections: { ...prev.sections, [branch]: sections } }));
+      } catch (error) {
+        console.error('Error fetching sections:', error);
+      }
+    }
+  };
+
+  const fetchSubjects = async (date, semester, branch, section) => {
+    if (date && semester && branch && section) {
+      try {
+        const response = await api.get(`/teacher/subjects/${date}/${semester}/${branch}/${section}`);
+        const subjects = response.data.subjects;
+        if (subjects.length === 1) {
+          setFormData(prev => ({ ...prev, subject: subjects[0] }));
+        }
+        setExamOptions(prev => ({ ...prev, subjects: { ...prev.subjects, [`${branch}-${section}`]: subjects } }));
+      } catch (error) {
+        console.error('Error fetching subjects:', error);
+      }
+    }
+  };
+
+  const isLabSubject = (subject) => subject && subject.toLowerCase().includes('lab');
+
+  const fetchBatch = async (date, semester, branch, section, subject) => {
+    if (date && semester && branch && section && subject && isLabSubject(subject)) {
+      try {
+        const response = await api.get(`/teacher/batch/${date}/${semester}/${branch}/${section}/${encodeURIComponent(subject)}`);
+        const batch = response.data.batch;
+        if (batch) {
+          setFormData(prev => ({ ...prev, batch }));
+        } else {
+          setFormData(prev => ({ ...prev, batch: '' }));
+        }
+      } catch (error) {
+        console.error('Error fetching batch:', error);
+        setFormData(prev => ({ ...prev, batch: '' }));
+      }
+    } else {
+      setFormData(prev => ({ ...prev, batch: '' }));
+    }
+  };
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
+    if (formData.scheduledDate) {
+      fetchSemesters(formData.scheduledDate);
+    }
+  }, [formData.scheduledDate]);
+
+  useEffect(() => {
+    if (formData.scheduledDate && formData.semester) {
+      fetchBranches(formData.scheduledDate, formData.semester);
+    }
+  }, [formData.scheduledDate, formData.semester]);
+
+  useEffect(() => {
+    if (formData.scheduledDate && formData.semester && formData.branch) {
+      fetchSections(formData.scheduledDate, formData.semester, formData.branch);
+    }
+  }, [formData.scheduledDate, formData.semester, formData.branch]);
+
+  useEffect(() => {
+    if (formData.scheduledDate && formData.semester && formData.branch && formData.section) {
+      fetchSubjects(formData.scheduledDate, formData.semester, formData.branch, formData.section);
+    }
+  }, [formData.scheduledDate, formData.semester, formData.branch, formData.section]);
+
+  // Auto-select single options
+  useEffect(() => {
+    if (examOptions.branches.length === 1 && !formData.branch) {
+      setFormData(prev => ({ ...prev, branch: examOptions.branches[0] }));
+    }
+  }, [examOptions.branches]);
+
+  useEffect(() => {
+    if (formData.branch && examOptions.sections[formData.branch]?.length === 1 && !formData.section) {
+      setFormData(prev => ({ ...prev, section: examOptions.sections[formData.branch][0] }));
+    }
+  }, [examOptions.sections, formData.branch]);
+
+  useEffect(() => {
+    if (formData.branch && formData.section && examOptions.subjects[`${formData.branch}-${formData.section}`]?.length === 1 && !formData.subject) {
+      setFormData(prev => ({ ...prev, subject: examOptions.subjects[`${formData.branch}-${formData.section}`][0] }));
+    }
+  }, [examOptions.subjects, formData.branch, formData.section]);
+
+  useEffect(() => {
+    if (formData.scheduledDate && formData.semester && formData.branch && formData.section && formData.subject) {
+      fetchBatch(formData.scheduledDate, formData.semester, formData.branch, formData.section, formData.subject);
+    }
+  }, [formData.scheduledDate, formData.semester, formData.branch, formData.section, formData.subject]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    // Reset dependent fields
+    if (name === 'scheduledDate') {
+      setFormData(prev => ({ ...prev, semester: '', branch: '', section: '', subject: '', batch: '' }));
+      setExamOptions(prev => ({ ...prev, semesters: [], branches: [], sections: {}, subjects: {} }));
+    } else if (name === 'semester') {
+      setFormData(prev => ({ ...prev, branch: '', section: '', subject: '', batch: '' }));
+      setExamOptions(prev => ({ ...prev, branches: [], sections: {}, subjects: {} }));
+    } else if (name === 'branch') {
+      setFormData(prev => ({ ...prev, section: '', subject: '', batch: '' }));
+      setExamOptions(prev => ({ ...prev, sections: {}, subjects: {} }));
+    } else if (name === 'section') {
+      setFormData(prev => ({ ...prev, subject: '', batch: '' }));
+      setExamOptions(prev => ({ ...prev, subjects: {} }));
+    } else if (name === 'subject') {
+      // Batch is now auto-filled via API call in useEffect
+    }
+  };
+
+  const fetchStudentCount = async (batch, branch, section) => {
+    if (batch && branch && section) {
+      try {
+        const response = await api.get(`/teacher/students-count/${batch}/${branch}/${section}`);
+        setFormData(prev => ({ ...prev, numberOfStudents: response.data.count }));
+      } catch (error) {
+        console.error('Error fetching student count:', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (formData.batch && formData.branch && formData.section) {
+      fetchStudentCount(formData.batch, formData.branch, formData.section);
+    }
+  }, [formData.batch, formData.branch, formData.section]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(''); setSuccess(''); setLoading(true);
+
+    // Validate required fields
+    if (!formData.semester || !formData.subject) {
+      setError('Please select semester and subject before creating the exam.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await api.post('/exam/create', formData);
       setSuccess('Exam created successfully!');
@@ -147,6 +331,14 @@ function CreateExam() {
 
   const handleBulkSubmit = async () => {
     setBulkProcessing(true); setError(''); setSuccess('');
+
+    // Validate required fields
+    if (!formData.semester || !formData.subject) {
+      setError('Please select semester and subject before creating the exam.');
+      setBulkProcessing(false);
+      return;
+    }
+
     try {
       const response = await api.post('/exam/create', formData);
       const examId = response.data.exam._id;
@@ -183,43 +375,73 @@ function CreateExam() {
           <h2 style={{ marginBottom: '30px', textAlign: 'center' }}>Create Exam</h2>
           <form onSubmit={handleSubmit}>
             <fieldset disabled={bulkOpen}>
-              {/* Exam Form Groups */}
+              {/* Exam Form Groups - Reordered for logical flow */}
               <div className="form-group">
                 <label>Exam Name</label>
-                <input type="text" name="examName" value={formData.examName} onChange={handleChange} required placeholder="e.g., Mid-Term Exam" />
+                <input type="text" name="examName" value={formData.examName} onChange={handleChange} required placeholder="e.g., Mid-Term Exam" style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
               </div>
-              <div className="form-group">
-                <label>Class</label>
-                {selectedClass ? (
-                  <div style={{ padding: '10px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: '#f9f9f9' }}>{selectedClass}</div>
-                ) : (
-                  <select name="class" value={formData.class} onChange={handleChange} required>
-                    <option value="">-- Select Class --</option>
-                    {user?.classes && user.classes.map((cls, index) => (
-                      <option key={index} value={cls}>{cls}</option>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Scheduled Date</label>
+                  <input type="date" name="scheduledDate" value={formData.scheduledDate} onChange={handleChange} required style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Scheduled Time</label>
+                  <input type="time" name="scheduledTime" value={formData.scheduledTime} onChange={handleChange} required style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Duration (in minutes)</label>
+                  <input type="number" name="duration" value={formData.duration} onChange={handleChange} required min="1" placeholder="e.g., 60" style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Semester</label>
+                  <select name="semester" value={formData.semester} onChange={handleChange} required disabled={!formData.scheduledDate} style={{ padding: '10px', height: '40px', fontSize: '16px' }}>
+                    {examOptions.semesters.map(semester => (
+                      <option key={semester} value={semester}>{semester}</option>
                     ))}
                   </select>
-                )}
+                </div>
               </div>
-              <div className="form-group">
-                <label>Batch</label>
-                <input type="text" name="batch" value={formData.batch} onChange={handleChange} placeholder="e.g., B1 (Optional)"/>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Branch</label>
+                  <select name="branch" value={formData.branch} onChange={handleChange} required disabled={!formData.semester} style={{ padding: '10px', height: '40px', fontSize: '16px' }}>
+                    <option value="">-- Select --</option>
+                    {examOptions.branches.map(branch => (
+                      <option key={branch} value={branch}>{branch}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Section</label>
+                  <select name="section" value={formData.section} onChange={handleChange} required disabled={!formData.branch} style={{ padding: '10px', height: '40px', fontSize: '16px' }}>
+                    <option value="">-- Select --</option>
+                    {formData.branch && examOptions.sections[formData.branch]?.map(section => (
+                      <option key={section} value={section}>{section}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Subject</label>
+                  <select name="subject" value={formData.subject} onChange={handleChange} required disabled={!formData.section} style={{ padding: '10px', height: '40px', fontSize: '16px' }}>
+                    <option value="">-- Select --</option>
+                    {formData.section && examOptions.subjects[`${formData.branch}-${formData.section}`]?.map(subject => (
+                      <option key={subject} value={subject}>{subject}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Batch</label>
+                  <input type="text" name="batch" value={formData.batch} onChange={handleChange} placeholder="e.g., B1 (Auto-filled for LAB subjects)" style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
+                </div>
               </div>
               <div className="form-group">
                 <label>Number of Students</label>
-                <input type="number" name="numberOfStudents" value={formData.numberOfStudents} onChange={handleChange} required min="1" placeholder="Enter number of students" />
-              </div>
-              <div className="form-group">
-                <label>Scheduled Date</label>
-                <input type="date" name="scheduledDate" value={formData.scheduledDate} onChange={handleChange} required />
-              </div>
-              <div className="form-group">
-                <label>Scheduled Time</label>
-                <input type="time" name="scheduledTime" value={formData.scheduledTime} onChange={handleChange} required />
-              </div>
-              <div className="form-group">
-                <label>Duration (in minutes)</label>
-                <input type="number" name="duration" value={formData.duration} onChange={handleChange} required min="1" placeholder="e.g., 60" />
+                <input type="number" name="numberOfStudents" value={formData.numberOfStudents} onChange={handleChange} required min="1" placeholder="Enter number of students" style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
               </div>
             </fieldset>
 

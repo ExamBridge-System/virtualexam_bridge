@@ -13,16 +13,16 @@ const router = express.Router();
 // POST /api/exam/create
 router.post('/create', authMiddleware, teacherAuth, async (req, res) => {
   try {
-    const { examName, class: examClass, numberOfStudents, scheduledDate, scheduledTime, duration } = req.body;
+    const { examName, semester, branch, section, subject, batch, numberOfStudents, scheduledDate, scheduledTime, duration } = req.body;
     const exam = new Exam({
-      examName, class: examClass, 
+      examName, semester, branch, section, subject, batch,
       teacherId: req.user.id, // <-- CORRECTED (matches your token)
       numberOfStudents, scheduledDate, scheduledTime, duration,
     });
     await exam.save();
     res.status(201).json({ message: 'Exam created successfully', exam });
   } catch (error) {
-    console.error("CREATE EXAM ERROR:", error.message); 
+    console.error("CREATE EXAM ERROR:", error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -60,7 +60,7 @@ router.get('/submission/:submissionId', authMiddleware, teacherAuth, async (req,
     const { submissionId } = req.params;
     const submission = await StudentExam.findById(submissionId)
       .populate('studentId', 'name rollNumber email class')
-      .populate('examId', 'examName class scheduledDate')
+      .populate('examId', 'examName branch section scheduledDate')
       .populate('assignedQuestions.questionId')
       .populate('screenshots.questionId');
     if (!submission) return res.status(404).json({ message: 'Submission not found' });
