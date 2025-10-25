@@ -35,6 +35,24 @@ function ViewStudentSubmissions() {
     }
   };
 
+  const downloadCSV = async () => {
+    try {
+      const res = await api.get(`/teacher/exam/${examId}/submissions/csv`, { responseType: 'blob' });
+      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+  a.download = `studentsquestion.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading CSV:', error);
+      alert('Failed to download CSV. See console for details.');
+    }
+  };
+
   const viewSubmissionDetails = async (submissionId) => {
     try {
       const response = await api.get(`/teacher/submission/${submissionId}`);
@@ -48,15 +66,22 @@ function ViewStudentSubmissions() {
     <div>
       <nav className="navbar">
         <h2 style={{ color: '#667eea' }}>Student Submissions</h2>
-        <button onClick={() => navigate('/teacher/dashboard')} className="btn btn-primary">
-          Back to Dashboard
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={() => navigate('/teacher/dashboard')} className="btn btn-primary">
+            Back to Dashboard
+          </button>
+        </div>
       </nav>
 
       <div className="container">
         {exam && (
           <div className="card">
-            <h3>{exam.examName}</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0 }}>{exam.examName}</h3>
+              <button onClick={downloadCSV} className="btn btn-secondary" style={{ background: '#edf2f7', color: '#2d3748' }}>
+                Export Student Question Report
+              </button>
+            </div>
             <p style={{ color: '#718096', marginTop: '10px' }}>
               Class: {exam.branch}-{exam.section} | Date: {new Date(exam.scheduledDate).toLocaleDateString()} |
               Time: {exam.scheduledTime}

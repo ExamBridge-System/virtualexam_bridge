@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // <-- Corrected import statement
+import React, { useState, useEffect, useRef } from 'react'; // <-- Added useRef
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
@@ -33,9 +33,10 @@ const styles = {
     opacity: 0,
   }),
   difficultyButton: (isChecked) => ({
-    backgroundColor: isChecked ? '#2196F3' : 'white',
-    color: isChecked ? 'white' : '#333',
-    borderColor: isChecked ? '#2196F3' : '#ccc',
+    // Use a subtle tinted background when selected, keep white otherwise
+    backgroundColor: isChecked ? '#eaf4ff' : 'white',
+    color: isChecked ? '#0b66d1' : '#333',
+    borderColor: isChecked ? '#bfe1ff' : '#ccc',
   }),
   // Style for the cancel button
   cancelButtonStyle: {
@@ -46,6 +47,12 @@ const styles = {
   },
   defaultOutlineButtonStyle: {
     flex: 1,
+  },
+  // checkmark shown next to selected difficulty
+  checkmark: {
+    marginRight: '8px',
+    color: '#0b66d1',
+    fontWeight: 700,
   },
 };
 // --- End Style Objects ---
@@ -84,6 +91,7 @@ function CreateExam() {
   const [csvFile, setCsvFile] = useState(null);
   const [parsedQuestions, setParsedQuestions] = useState([]);
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  const fileInputRef = useRef(null);
 
   const fetchSemesters = async (date) => {
     if (date) {
@@ -302,19 +310,79 @@ function CreateExam() {
   };
 
   const handleParseCsv = () => {
-    if (!csvFile) return;
+    // Always use the file directly from the file input ref to ensure the latest selected file is used
+    const fileToParse = fileInputRef.current?.files[0] || null;
+    if (!fileToParse) {
+      setError('Please select a CSV file to parse');
+      return;
+    }
+    // Sync the csvFile state with the selected file
+    setCsvFile(fileToParse);
     setBulkProcessing(true); setError(''); setParsedQuestions([]);
-    Papa.parse(csvFile, {
-      header: true, skipEmptyLines: true,
+    // More tolerant parsing: normalize headers, accept common header names, fallback to headerless CSV
+    const normalizeHeader = (h) => (h || '').toString().replace(/^\uFEFF/, '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    const mapRowToQuestion = (row, qField, lField) => {
+      const qText = (row[qField] || row.question || row.questionText || row.text || '') + '';
+      const lvl = (lField ? (row[lField] || '') : (row.level || row.difficulty || '')) + '';
+      return {
+        questionText: qText.trim(),
+        level: ['easy', 'medium', 'hard'].includes(lvl.toLowerCase()) ? lvl.toLowerCase() : 'easy',
+      };
+    };
+
+    Papa.parse(fileToParse, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (h) => normalizeHeader(h),
       complete: (results) => {
-        const validQuestions = results.data
-          .filter(row => row.questionText && !row.questionText.trim().startsWith('#'))
-          .map(row => ({
-            questionText: row.questionText || '',
-            level: ['easy', 'medium', 'hard'].includes(row.level?.toLowerCase()) ? row.level.toLowerCase() : 'easy',
-          }));
-        setParsedQuestions(validQuestions);
-        setBulkProcessing(false);
+        try {
+          const fields = results.meta && results.meta.fields ? results.meta.fields.map(f => (f || '').toString()) : [];
+          // find probable question and level headers
+          const qField = fields.find(f => /question|qtext|text/.test(f)) || null;
+          const lField = fields.find(f => /level|difficulty|diff/.test(f)) || null;
+
+          let rows = results.data || [];
+
+          // If no recognizable question header, try parsing without header (first column = question, second = level)
+          if (!qField) {
+            Papa.parse(fileToParse, {
+              header: false,
+              skipEmptyLines: true,
+              complete: (raw) => {
+                const parsed = (raw.data || [])
+                  .map(r => ({ questionText: (r[0] || '') + '', level: ((r[1] || 'easy') + '').toLowerCase() }))
+                  .filter(r => r.questionText && r.questionText.trim() && !r.questionText.trim().startsWith('#'))
+                  .map(r => ({ questionText: r.questionText.trim(), level: ['easy','medium','hard'].includes(r.level) ? r.level : 'easy' }));
+                if (parsed.length === 0) {
+                  setError('No valid questions found in the CSV. Make sure the file has a question column.');
+                }
+                setParsedQuestions(parsed);
+                setBulkProcessing(false);
+              },
+              error: (e) => {
+                setError('Failed to parse CSV (headerless fallback): ' + e.message);
+                setBulkProcessing(false);
+              }
+            });
+            return;
+          }
+
+          // Map rows using detected fields
+          const validQuestions = rows
+            .map(r => mapRowToQuestion(r, qField, lField))
+            .filter(r => r.questionText && r.questionText.trim() && !r.questionText.trim().startsWith('#'));
+
+          if (validQuestions.length === 0) {
+            setError('No valid questions found in the CSV. Ensure there is a question column (questionText, question, text) and optional level column (level, difficulty).');
+          }
+
+          setParsedQuestions(validQuestions);
+        } catch (err) {
+          setError('Failed to parse CSV: ' + (err.message || err));
+        } finally {
+          setBulkProcessing(false);
+        }
       },
       error: (err) => {
         setError('Failed to parse CSV: ' + err.message);
@@ -457,7 +525,7 @@ function CreateExam() {
                 type="button"
                 className="btn btn-outline" // Keep this for base styling
                 style={ bulkOpen ? styles.cancelButtonStyle : styles.defaultOutlineButtonStyle }
-                onClick={() => { setBulkOpen(!bulkOpen); setParsedQuestions([]); setError(''); }}
+                onClick={() => { setBulkOpen(!bulkOpen); setParsedQuestions([]); setError(''); if (fileInputRef.current) fileInputRef.current.value = ''; }}
                 disabled={loading}
               >
                 {bulkOpen ? 'Cancel Bulk Upload' : 'Bulk Upload Questions'}
@@ -471,8 +539,9 @@ function CreateExam() {
               <p style={{ marginTop: 0 }}><strong>Bulk upload format</strong>: <strong>questionText,level</strong></p>
               <a href="#" onClick={handleDownloadTemplate}>Download CSV template</a>
               <div style={{ marginTop: '12px' }}>
-                <input type="file" accept=".csv,text/csv" onChange={(e) => setCsvFile(e.target.files[0] || null)} />
-                <button type="button" className="btn btn-primary" style={{ marginLeft: '8px' }} disabled={!csvFile || bulkProcessing} onClick={handleParseCsv}>
+                <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={(e) => setCsvFile(e.target.files[0] || null)} />
+                {/* Allow clicking Parse immediately; handler will fallback to the file input ref if state isn't updated yet */}
+                <button type="button" className="btn btn-primary" style={{ marginLeft: '8px' }} disabled={bulkProcessing} onClick={handleParseCsv}>
                   {bulkProcessing ? 'Parsing...' : 'Parse CSV'}
                 </button>
               </div>
@@ -517,7 +586,7 @@ function CreateExam() {
                     <button type="button" className="btn btn-secondary" onClick={handleBulkSubmit} disabled={bulkProcessing}>
                       {bulkProcessing ? 'Processing...' : 'Create Exam & Upload Questions'}
                     </button>
-                    <button type="button" className="btn btn-outline" onClick={() => { setParsedQuestions([]); setCsvFile(null); }}>Clear</button>
+                    <button type="button" className="btn btn-outline" onClick={() => { setParsedQuestions([]); setCsvFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}>Clear</button>
                   </div>
                 </div>
               )}

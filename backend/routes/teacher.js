@@ -397,6 +397,72 @@ router.get('/exam/:examId/submissions', authMiddleware, teacherAuth, async (req,
   }
 });
 
+// Download student submissions as CSV (roll number + assigned questions)
+router.get('/exam/:examId/submissions/csv', authMiddleware, teacherAuth, async (req, res) => {
+  try {
+    const { examId } = req.params;
+
+    const exam = await Exam.findById(examId);
+    if (!exam || exam.teacherId.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    let submissions = await StudentExam.find({ examId })
+      .populate('studentId', 'name rollNumber email')
+      .populate('assignedQuestions.questionId');
+
+    // Sort submissions by roll number (ascending). Try numeric compare first, fallback to string.
+    submissions = submissions.sort((a, b) => {
+      const ra = a.studentId?.rollNumber || '';
+      const rb = b.studentId?.rollNumber || '';
+      const na = parseFloat(ra.replace(/[^0-9.-]/g, ''));
+      const nb = parseFloat(rb.replace(/[^0-9.-]/g, ''));
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      return String(ra).localeCompare(String(rb));
+    });
+
+    // Build CSV
+    // Header: RollNumber,StudentName,AssignedQuestions
+    const rows = [];
+    rows.push(['RollNumber', 'StudentName', 'AssignedQuestions']);
+
+    submissions.forEach((s) => {
+      const roll = s.studentId?.rollNumber || '';
+      const name = s.studentId?.name || '';
+      // join assigned question texts using | as separator to keep it readable
+      const questions = (s.assignedQuestions || []).map(q => {
+        return q.questionText || (q.questionId && q.questionId.questionText) || '';
+      }).join(' | ');
+
+      // Prevent Excel from rendering long roll numbers in scientific notation by using a formula
+      // that yields the text value: ="<roll>" (CSV encoding will escape quotes appropriately).
+      const rollCell = roll ? `="${roll}"` : '';
+
+      rows.push([rollCell, name, questions]);
+    });
+
+    // Convert rows to CSV string
+    const escapeCsv = (value) => {
+      if (value == null) return '';
+      const str = String(value);
+      // escape double quotes by doubling them
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r') || str.includes('|')) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    };
+
+    const csv = rows.map(r => r.map(escapeCsv).join(',')).join('\n');
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', `attachment; filename="studentsquestion.csv"`);
+    return res.send(csv);
+  } catch (error) {
+    console.error('CSV download error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get specific student submission details
 router.get('/submission/:submissionId', authMiddleware, teacherAuth, async (req, res) => {
   try {
