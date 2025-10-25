@@ -174,26 +174,12 @@ router.post('/login', async (req, res) => {
     console.log(`STATUS: User FOUND! Found By: ${foundBy}. Role: ${role}. DB Hash starts with: ${user.password.substring(0, 10)}...`);
 
 
-    // First-time login logic
-    let isMatch = true;
-    
-    console.log(`First-Time Check (password === ID): ${password === email}`);
+        // Verify password: do not auto-reset the stored password on login
+        const isMatch = await bcrypt.compare(password, user.password);
 
-    if (password === email) {
-      // First-time login: Hash and save password
-      const hashedPassword = await bcrypt.hash(password, 10);
-      user.password = hashedPassword;
-      await user.save();
-      console.log(`STATUS: First-time login triggered. Password was hashed/saved.`);
-    } else {
-      isMatch = await bcrypt.compare(password, user.password);
-      console.log(`STATUS: bcrypt.compare result (isMatch): ${isMatch}`);
-    }
-
-    if (!isMatch) {
-        console.log(`STATUS: FAILED - Password comparison returned false.`);
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Invalid credentials' });
+        }
 
     console.log(`STATUS: SUCCESS! Token generating...`);
 
