@@ -2,9 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../utils/api';
 
-// Get the backend URL from the API configuration
-const BACKEND_URL = 'http://localhost:3001';
-
 function ViewStudentSubmissions() {
   const { examId } = useParams();
   const navigate = useNavigate();
