@@ -297,13 +297,22 @@ router.post('/forgot-password/send-code', async (req, res) => {
     try {
         const { email } = req.body;
 
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email || !email.trim()) {
+            return res.status(400).json({ message: 'Please enter your email address.' });
+        }
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ message: 'Please enter a valid email address.' });
+        }
+
         let user = await Student.findOne({ email });
         if (!user) {
             user = await Teacher.findOne({ email });
         }
-        
+
         if (!user) {
-            return res.json({ message: 'If an account exists with that email, a verification code has been sent.' });
+            return res.status(400).json({ message: 'No account found with this email address.' });
         }
 
         const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();

@@ -38,6 +38,24 @@ function SuperAdminDashboard() {
     semester: '',
   });
 
+  // State for teacher search
+  const [teacherSearchForm, setTeacherSearchForm] = useState({
+    department: '',
+    teacherId: '',
+    name: '',
+  });
+  const [teachers, setTeachers] = useState([]);
+
+  // State for student search
+  const [studentSearchForm, setStudentSearchForm] = useState({
+    name: '',
+    rollNumber: '',
+    branch: '',
+    section: '',
+    semester: '',
+  });
+  const [students, setStudents] = useState([]);
+
   const handleStudentFormChange = (e) => {
     setStudentForm({
       ...studentForm,
@@ -66,6 +84,62 @@ function SuperAdminDashboard() {
       });
     } catch (err) {
       setError(err.response?.data?.message || 'Error adding student');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTeacherSearchFormChange = (e) => {
+    setTeacherSearchForm({
+      ...teacherSearchForm,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleStudentSearchFormChange = (e) => {
+    setStudentSearchForm({
+      ...studentSearchForm,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSearchTeachers = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const params = new URLSearchParams();
+      if (teacherSearchForm.department) params.append('department', teacherSearchForm.department);
+      if (teacherSearchForm.teacherId) params.append('teacherId', teacherSearchForm.teacherId);
+      if (teacherSearchForm.name) params.append('name', teacherSearchForm.name);
+
+      const response = await api.get(`/admin/search-teachers?${params.toString()}`);
+      setTeachers(response.data.teachers);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error searching teachers');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearchStudents = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const params = new URLSearchParams();
+      if (studentSearchForm.name) params.append('name', studentSearchForm.name);
+      if (studentSearchForm.rollNumber) params.append('rollNumber', studentSearchForm.rollNumber);
+      if (studentSearchForm.branch) params.append('branch', studentSearchForm.branch);
+      if (studentSearchForm.section) params.append('section', studentSearchForm.section);
+      if (studentSearchForm.semester) params.append('semester', studentSearchForm.semester);
+
+      const response = await api.get(`/admin/search-students?${params.toString()}`);
+      setStudents(response.data.students);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error searching students');
     } finally {
       setLoading(false);
     }
@@ -429,6 +503,190 @@ Tuesday,11:00 AM - 12:00 PM,Chemistry,ECE,B1,C,7`;
               {loading ? 'Uploading...' : 'Upload Students'}
             </button>
           </form>
+        </div>
+
+        {/* Search Teachers */}
+        <div className="card">
+          <h2>Search Teachers</h2>
+          <form onSubmit={handleSearchTeachers} className="form">
+            <div className="form-group">
+              <label>Department</label>
+              <select
+                name="department"
+                value={teacherSearchForm.department}
+                onChange={handleTeacherSearchFormChange}
+              >
+                <option value="">All Departments</option>
+                <option value="IT">IT</option>
+                <option value="CSE">CSE</option>
+                <option value="ECE">ECE</option>
+                <option value="ME">ME</option>
+                <option value="CE">CE</option>
+                <option value="EE">EE</option>
+                <option value="CHE">CHE</option>
+                <option value="BIO">BIO</option>
+                <option value="AE">AE</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Teacher ID</label>
+              <input
+                type="text"
+                name="teacherId"
+                value={teacherSearchForm.teacherId}
+                onChange={handleTeacherSearchFormChange}
+                placeholder="Enter teacher ID"
+              />
+            </div>
+            <div className="form-group">
+              <label>Name</label>
+              <input
+                type="text"
+                name="name"
+                value={teacherSearchForm.name}
+                onChange={handleTeacherSearchFormChange}
+                placeholder="Enter teacher name"
+              />
+            </div>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{ width: 'auto', marginTop: '20px', padding: '10px 20px' }}
+              disabled={loading}
+            >
+              {loading ? 'Searching...' : 'Search Teachers'}
+            </button>
+          </form>
+          {teachers.length > 0 && (
+            <div style={{ marginTop: '20px' }}>
+              <h3>Search Results</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>Name</th>
+                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>Email</th>
+                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>Teacher ID</th>
+                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>Department</th>
+                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>Branch-Sections</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teachers.map((teacher) => (
+                    <tr key={teacher._id}>
+                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{teacher.name}</td>
+                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{teacher.email}</td>
+                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{teacher.teacherId}</td>
+                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{teacher.department}</td>
+                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{teacher.branchSection.join(', ')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Search Students */}
+        <div className="card">
+          <h2>Search Students</h2>
+          <form onSubmit={handleSearchStudents} className="form">
+            <div className="form-group">
+              <label>Name</label>
+              <input
+                type="text"
+                name="name"
+                value={studentSearchForm.name}
+                onChange={handleStudentSearchFormChange}
+                placeholder="Enter student name"
+              />
+            </div>
+            <div className="form-group">
+              <label>Roll Number</label>
+              <input
+                type="text"
+                name="rollNumber"
+                value={studentSearchForm.rollNumber}
+                onChange={handleStudentSearchFormChange}
+                placeholder="Enter roll number"
+              />
+            </div>
+            <div className="form-group">
+              <label>Branch</label>
+              <select
+                name="branch"
+                value={studentSearchForm.branch}
+                onChange={handleStudentSearchFormChange}
+              >
+                <option value="">All Branches</option>
+                <option value="IT">IT</option>
+                <option value="CSE">CSE</option>
+                <option value="ECE">ECE</option>
+                <option value="ME">ME</option>
+                <option value="CE">CE</option>
+                <option value="EE">EE</option>
+                <option value="CHE">CHE</option>
+                <option value="BIO">BIO</option>
+                <option value="AE">AE</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Section</label>
+              <input
+                type="text"
+                name="section"
+                value={studentSearchForm.section}
+                onChange={handleStudentSearchFormChange}
+                placeholder="Enter section"
+              />
+            </div>
+            <div className="form-group">
+              <label>Semester</label>
+              <input
+                type="text"
+                name="semester"
+                value={studentSearchForm.semester}
+                onChange={handleStudentSearchFormChange}
+                placeholder="Enter semester"
+              />
+            </div>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{ width: 'auto', marginTop: '20px', padding: '10px 20px' }}
+              disabled={loading}
+            >
+              {loading ? 'Searching...' : 'Search Students'}
+            </button>
+          </form>
+          {students.length > 0 && (
+            <div style={{ marginTop: '20px' }}>
+              <h3>Search Results</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>Name</th>
+                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>Email</th>
+                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>Roll Number</th>
+                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>Branch</th>
+                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>Section</th>
+                    <th style={{ border: '1px solid #ddd', padding: '8px' }}>Semester</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {students.map((student) => (
+                    <tr key={student._id}>
+                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{student.name}</td>
+                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{student.email}</td>
+                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{student.rollNumber}</td>
+                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{student.branch}</td>
+                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{student.section}</td>
+                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{student.semester}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Add Single Student */}

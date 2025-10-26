@@ -25,11 +25,31 @@ function StudentDashboard() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
-  const [isUsingDefaultPassword, setIsUsingDefaultPassword] = useState(false);
+  const [countdowns, setCountdowns] = useState({});
 
   useEffect(() => {
     fetchExams();
   }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newCountdowns = {};
+      exams.forEach(exam => {
+        const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
+        const currentTime = new Date();
+        const timeDiff = examStartTime - currentTime;
+
+        if (timeDiff > 0 && timeDiff <= 15 * 60 * 1000) { // Within 15 minutes
+          const minutes = Math.floor(timeDiff / (1000 * 60));
+          const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+          newCountdowns[exam._id] = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+      });
+      setCountdowns(newCountdowns);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [exams]);
 
   const fetchExams = async () => {
     try {
@@ -134,13 +154,7 @@ function StudentDashboard() {
     navigate('/login');
   };
 
-  const getQuestionCount = (exam) => {
-    const dist = exam.questionsPerSet || {};
-    const easy = dist.easy || 0;
-    const medium = dist.medium || 0;
-    const hard = dist.hard || 0;
-    return easy + medium + hard;
-  };
+
 
   const isExamActive = (exam) => {
     const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
@@ -274,8 +288,8 @@ function StudentDashboard() {
 
         {error && <div className="error">{error}</div>}
 
-        {/* Three Column Grid */}
-        <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+        {/* Two Column Grid */}
+        <div className="grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
           {/* Active Exams Panel */}
           <div className="card">
             <div style={{ marginBottom: '25px' }}>
@@ -289,24 +303,39 @@ function StudentDashboard() {
               <div className="loading">⏳ Loading exams...</div>
             ) : exams.filter(exam => isExamActive(exam)).length > 0 ? (
               <div className="grid">
-                {exams.filter(exam => isExamActive(exam)).map((exam) => (
-                  <div key={exam._id} className="exam-card" style={{ border: '2px solid #10b981' }}>
-                    <h3>{exam.examName}</h3>
-                    <div className="exam-card-info">
-                      <div><strong>Class:</strong> {exam.class}</div>
-                      <div><strong>Date:</strong> {new Date(exam.scheduledDate).toLocaleDateString()}</div>
-                      <div><strong>Time:</strong> {exam.scheduledTime}</div>
-                      <div><strong>Duration:</strong> {exam.duration} minutes</div>
+                {exams.filter(exam => isExamActive(exam)).map((exam) => {
+                  const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
+                  const currentTime = new Date();
+                  const timeDiff = examStartTime - currentTime;
+                  const isWithin15Min = timeDiff > 0 && timeDiff <= 15 * 60 * 1000;
+                  const countdown = countdowns[exam._id];
+
+                  return (
+                    <div key={exam._id} className="exam-card" style={{ border: isWithin15Min ? '2px solid #ef4444' : '2px solid #10b981' }}>
+                      <h3>{exam.examName}</h3>
+                      <div className="exam-card-info">
+                        <div><strong>Class:</strong> {exam.class}</div>
+                        <div><strong>Date:</strong> {new Date(exam.scheduledDate).toLocaleDateString()}</div>
+                        <div><strong>Time:</strong> {exam.scheduledTime}</div>
+                        <div><strong>Duration:</strong> {exam.duration} minutes</div>
+                        {isWithin15Min && countdown && (
+                          <div style={{ marginTop: '10px', padding: '8px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px' }}>
+                            <strong style={{ color: '#dc2626', fontSize: '18px' }}>
+                              ⏰ Starting in: {countdown}
+                            </strong>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => checkExamAccess(exam._id)}
+                        className="btn btn-primary"
+                        style={{ width: '100%', background: isWithin15Min ? '#ef4444' : '#10b981' }}
+                      >
+                        {isWithin15Min ? 'Enter Exam (Starting Soon!)' : 'Enter Exam'}
+                      </button>
                     </div>
-                    <button
-                      onClick={() => checkExamAccess(exam._id)}
-                      className="btn btn-primary"
-                      style={{ width: '100%', background: '#10b981' }}
-                    >
-                      Enter Exam
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div style={{
@@ -321,6 +350,79 @@ function StudentDashboard() {
                 </p>
                 <p style={{ fontSize: '14px', color: '#9ca3af', marginTop: '10px' }}>
                   Check back during exam time
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Upcoming Exams Panel */}
+          <div className="card">
+            <div style={{ marginBottom: '25px' }}>
+              <h2>Upcoming Exams</h2>
+              <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '5px' }}>
+                Scheduled exams for your class
+              </p>
+            </div>
+
+            {loading ? (
+              <div className="loading">⏳ Loading exams...</div>
+            ) : exams.filter(exam => {
+              const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
+              const currentTime = new Date();
+              return examStartTime > currentTime && !isExamActive(exam);
+            }).length > 0 ? (
+              <div className="grid">
+                {exams.filter(exam => {
+                  const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
+                  const currentTime = new Date();
+                  return examStartTime > currentTime && !isExamActive(exam);
+                }).map((exam) => {
+                  const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
+                  const currentTime = new Date();
+                  const timeDiff = examStartTime - currentTime;
+                  const isWithin15Min = timeDiff > 0 && timeDiff <= 15 * 60 * 1000;
+                  const countdown = countdowns[exam._id];
+
+                  return (
+                    <div key={exam._id} className="exam-card" style={{ border: isWithin15Min ? '2px solid #ef4444' : '2px solid #3b82f6' }}>
+                      <h3>{exam.examName}</h3>
+                      <div className="exam-card-info">
+                        <div><strong>Class:</strong> {exam.class}</div>
+                        <div><strong>Date:</strong> {new Date(exam.scheduledDate).toLocaleDateString()}</div>
+                        <div><strong>Time:</strong> {exam.scheduledTime}</div>
+                        <div><strong>Duration:</strong> {exam.duration} minutes</div>
+                        {isWithin15Min && countdown && (
+                          <div style={{ marginTop: '10px', padding: '8px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px' }}>
+                            <strong style={{ color: '#dc2626', fontSize: '18px' }}>
+                              ⏰ Starting in: {countdown}
+                            </strong>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        className="btn btn-secondary"
+                        style={{ width: '100%' }}
+                        disabled
+                      >
+                        Scheduled for {new Date(exam.scheduledDate).toLocaleDateString()} at {exam.scheduledTime}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                background: '#f0f9ff',
+                borderRadius: '8px',
+                border: '2px dashed #bae6fd'
+              }}>
+                <p style={{ fontSize: '16px', color: '#6b7280' }}>
+                  📅 No upcoming exams scheduled
+                </p>
+                <p style={{ fontSize: '14px', color: '#9ca3af', marginTop: '10px' }}>
+                  Check back later for new exam schedules
                 </p>
               </div>
             )}

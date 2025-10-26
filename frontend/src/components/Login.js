@@ -67,6 +67,20 @@ function Login() {
     setForgotMessage('');
     setForgotError('');
     setLoading(true);
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!forgotEmail.trim()) {
+      setForgotError('Please enter your email address.');
+      setLoading(false);
+      return;
+    }
+    if (!emailRegex.test(forgotEmail)) {
+      setForgotError('Please enter a valid email address.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await api.post('/auth/forgot-password/send-code', { email: forgotEmail });
       setForgotMessage(response.data.message);

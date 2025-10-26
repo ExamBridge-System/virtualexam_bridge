@@ -84,7 +84,7 @@ const weightedRandomSelect = (questions, count) => {
   return result;
 };
 
-// Get available exams for student's class
+// Get all exams for student's class
 router.get('/exams', authMiddleware, studentAuth, async (req, res) => {
   try {
     const Student = require('../models/Student');
