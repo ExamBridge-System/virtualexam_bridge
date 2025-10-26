@@ -118,6 +118,9 @@ function ViewStudentSubmissions() {
                           <p style={{ color: '#718096', fontSize: '14px', marginTop: '5px' }}>
                             Roll: {submission.studentId?.rollNumber}
                           </p>
+                          <p style={{ color: '#718096', fontSize: '14px', marginTop: '5px' }}>
+                            Semester: {submission.studentId?.semester || '-'}
+                          </p>
                         </div>
                         <span
                           style={{
@@ -173,7 +176,8 @@ function ViewStudentSubmissions() {
                   <p style={{ color: '#718096', marginTop: '5px' }}>
                     Roll Number: {selectedSubmission.studentId?.rollNumber}<br />
                     Email: {selectedSubmission.studentId?.email}<br />
-                    Class: {selectedSubmission.studentId?.class}
+                    Class: {selectedSubmission.studentId?.class}<br />
+                    Semester: {selectedSubmission.studentId?.semester || '-'}
                   </p>
                   {selectedSubmission.submittedAt && (
                     <p style={{ color: '#718096', marginTop: '10px' }}>

@@ -20,6 +20,9 @@ function Login() {
   const [forgotStep, setForgotStep] = useState(1);
   const [forgotMessage, setForgotMessage] = useState('');
   const [forgotError, setForgotError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPwd, setShowNewPwd] = useState(false);
+  const [showConfirmNewPwd, setShowConfirmNewPwd] = useState(false);
 
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -170,25 +173,48 @@ function Login() {
             }}>
               PASSWORD
             </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              placeholder="Enter your password"
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                fontSize: '14px',
-                border: '1px solid #e5e7eb',
-                borderRadius: '6px',
-                outline: 'none',
-                transition: 'border-color 0.2s'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="Enter your password"
+                style={{
+                  width: '100%',
+                  padding: '12px 40px 12px 16px',
+                  fontSize: '14px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  outline: 'none',
+                  transition: 'border-color 0.2s'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#2563eb'}
+                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(s => !s)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                style={{
+                  position: 'absolute',
+                  right: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '6px',
+                }}
+              >
+                {showPassword ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3.11-11-7.5A11 11 0 0 1 6.06 6.06"/><path d="M1 1l22 22"/></svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                )}
+              </button>
+            </div>
           </div>
 
           {error && (
@@ -377,22 +403,36 @@ function Login() {
                 }}>
                   New Password
                 </label>
-                <input
-                  type="password"
-                  placeholder="Enter new password"
-                  value={newPwd}
-                  onChange={(e) => setNewPwd(e.target.value)}
-                  className="form-input"
-                  style={{ 
-                    marginBottom: '15px',
-                    width: '100%',
-                    padding: '12px 16px',
-                    fontSize: '14px',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '6px'
-                  }}
-                  disabled={loading}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showNewPwd ? 'text' : 'password'}
+                    placeholder="Enter new password"
+                    value={newPwd}
+                    onChange={(e) => setNewPwd(e.target.value)}
+                    className="form-input"
+                    style={{ 
+                      marginBottom: '15px',
+                      width: '100%',
+                      padding: '12px 40px 12px 16px',
+                      fontSize: '14px',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px'
+                    }}
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPwd(s => !s)}
+                    aria-label={showNewPwd ? 'Hide new password' : 'Show new password'}
+                    style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '6px' }}
+                  >
+                    {showNewPwd ? (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3.11-11-7.5A11 11 0 0 1 6.06 6.06"/><path d="M1 1l22 22"/></svg>
+                    ) : (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                    )}
+                  </button>
+                </div>
                 
                 <label style={{ 
                   display: 'block', 
@@ -403,22 +443,36 @@ function Login() {
                 }}>
                   Confirm New Password
                 </label>
-                <input
-                  type="password"
-                  placeholder="Confirm new password"
-                  value={confirmNewPwd}
-                  onChange={(e) => setConfirmNewPwd(e.target.value)}
-                  className="form-input"
-                  style={{ 
-                    marginBottom: '20px',
-                    width: '100%',
-                    padding: '12px 16px',
-                    fontSize: '14px',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '6px'
-                  }}
-                  disabled={loading}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showConfirmNewPwd ? 'text' : 'password'}
+                    placeholder="Confirm new password"
+                    value={confirmNewPwd}
+                    onChange={(e) => setConfirmNewPwd(e.target.value)}
+                    className="form-input"
+                    style={{ 
+                      marginBottom: '20px',
+                      width: '100%',
+                      padding: '12px 40px 12px 16px',
+                      fontSize: '14px',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px'
+                    }}
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmNewPwd(s => !s)}
+                    aria-label={showConfirmNewPwd ? 'Hide confirm password' : 'Show confirm password'}
+                    style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '6px' }}
+                  >
+                    {showConfirmNewPwd ? (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3.11-11-7.5A11 11 0 0 1 6.06 6.06"/><path d="M1 1l22 22"/></svg>
+                    ) : (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                    )}
+                  </button>
+                </div>
 
                 <div className="flex-between" style={{ display: 'flex', gap: '10px' }}>
                   <button

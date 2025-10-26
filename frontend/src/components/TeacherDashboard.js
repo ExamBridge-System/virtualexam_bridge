@@ -26,6 +26,9 @@ function TeacherDashboard() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     fetchExams();
@@ -65,6 +68,32 @@ function TeacherDashboard() {
         {status}
       </span>
     );
+  };
+
+  // Compute status from scheduledDate, scheduledTime and duration if available
+  const computeExamStatus = (exam) => {
+    try {
+      const now = new Date();
+      if (exam && exam.scheduledDate) {
+        const startDate = new Date(exam.scheduledDate);
+        let startHour = 0, startMinute = 0;
+        if (exam.scheduledTime) {
+          const parts = exam.scheduledTime.split(':').map(Number);
+          startHour = parts[0] || 0;
+          startMinute = parts[1] || 0;
+        }
+        startDate.setHours(startHour, startMinute, 0, 0);
+        const durationMinutes = Number(exam.duration) || 0;
+        const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
+        if (now < startDate) return 'upcoming';
+        if (now >= startDate && now <= endDate) return 'active';
+        if (now > endDate) return 'completed';
+      }
+    } catch (e) {
+      // fallback to stored status
+      console.error('Error computing exam status', e);
+    }
+    return exam?.status || 'scheduled';
   };
 
   // Reusable Error/Info Modal
@@ -242,6 +271,7 @@ function TeacherDashboard() {
                 <tr>
                   <th>Exam Name</th>
                   <th>Class</th>
+                  <th>Semester</th>
                   <th>Date</th>
                   <th>Time</th>
                   <th>Students</th>
@@ -254,10 +284,16 @@ function TeacherDashboard() {
                   <tr key={exam._id}>
                     <td><strong>{exam.examName}</strong></td>
                     <td>
-                      <span className="badge badge-primary">
-                        {exam.branch}-{exam.section}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <span className="badge badge-primary">{exam.branch}-{exam.section}</span>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          {exam.batch && (
+                            <span className="badge badge-secondary">Batch: {exam.batch}</span>
+                          )}
+                        </div>
+                      </div>
                     </td>
+                    <td>{exam.semester || '-'}</td>
                     <td>{new Date(exam.scheduledDate).toLocaleDateString()}</td>
                     <td>
                       <strong>{(() => {
@@ -286,7 +322,7 @@ function TeacherDashboard() {
                         {exam.numberOfStudents}
                       </span>
                     </td>
-                    <td>{getStatusBadge(exam.status)}</td>
+                    <td>{getStatusBadge(computeExamStatus(exam))}</td>
                     <td>
                       <div style={{ display: 'flex', gap: '5px' }}>
                         <button
@@ -342,20 +378,12 @@ function TeacherDashboard() {
 
       {/* Quick Stats */}
       {exams.length > 0 && (() => {
-        const now = new Date();
         let completed = 0;
         let active = 0;
         exams.forEach((exam) => {
-          let examDateTime;
-          if (exam.scheduledDate && exam.scheduledTime) {
-            const [hour, minute] = exam.scheduledTime.split(':');
-            examDateTime = new Date(exam.scheduledDate);
-            examDateTime.setHours(Number(hour), Number(minute), 0, 0);
-          } else {
-            examDateTime = new Date(exam.scheduledDate);
-          }
-          if (examDateTime < now) completed++;
-          if (exam.status === 'active') active++;
+          const status = computeExamStatus(exam);
+          if (status === 'completed') completed++;
+          if (status === 'active') active++;
         });
         return (
           <div
@@ -443,13 +471,40 @@ function TeacherDashboard() {
             {passwordError && <div className="error" style={{ marginBottom: '10px' }}>{passwordError}</div>}
 
             <label>Old Password</label>
-            <input type="password" placeholder="Old Password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} className="form-input" style={{ marginBottom: '10px' }} />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
+              <input type={showOldPassword ? 'text' : 'password'} placeholder="Old Password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} className="form-input" style={{ flex: 1 }} />
+              <button type="button" className="btn btn-outline" onClick={() => setShowOldPassword(s => !s)} aria-label={showOldPassword ? 'Hide old password' : 'Show old password'} style={{ padding: '6px 10px', background: 'none', border: 'none' }}>
+                {showOldPassword ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3.11-11-7.5A11 11 0 0 1 6.06 6.06"/><path d="M1 1l22 22"/></svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                )}
+              </button>
+            </div>
 
             <label>New Password</label>
-            <input type="password" placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="form-input" style={{ marginBottom: '10px' }} />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
+              <input type={showNewPassword ? 'text' : 'password'} placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="form-input" style={{ flex: 1 }} />
+              <button type="button" className="btn btn-outline" onClick={() => setShowNewPassword(s => !s)} aria-label={showNewPassword ? 'Hide new password' : 'Show new password'} style={{ padding: '6px 10px', background: 'none', border: 'none' }}>
+                {showNewPassword ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3.11-11-7.5A11 11 0 0 1 6.06 6.06"/><path d="M1 1l22 22"/></svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                )}
+              </button>
+            </div>
 
             <label>Confirm New Password</label>
-            <input type="password" placeholder="Confirm New Password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} className="form-input" style={{ marginBottom: '20px' }} />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
+              <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm New Password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} className="form-input" style={{ flex: 1 }} />
+              <button type="button" className="btn btn-outline" onClick={() => setShowConfirmPassword(s => !s)} aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} style={{ padding: '6px 10px', background: 'none', border: 'none' }}>
+                {showConfirmPassword ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3.11-11-7.5A11 11 0 0 1 6.06 6.06"/><path d="M1 1l22 22"/></svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                )}
+              </button>
+            </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <button onClick={() => { setShowPasswordChange(false); setPasswordError(''); setOldPassword(''); setNewPassword(''); setConfirmNewPassword(''); }} className="btn btn-secondary">Cancel</button>

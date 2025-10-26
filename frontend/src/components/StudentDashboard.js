@@ -18,6 +18,9 @@ function StudentDashboard() {
   const [verificationCode, setVerificationCode] = useState('');
   const [emailChangeStep, setEmailChangeStep] = useState(1);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -146,6 +149,24 @@ function StudentDashboard() {
     return currentTime >= examStartTime && currentTime <= examEndTime;
   };
 
+  // Format semester value to include ordinal suffix (e.g., 1 -> 1st, 2 -> 2nd, 3 -> 3rd, 11 -> 11th)
+  const formatSemester = (sem) => {
+    if (sem === null || sem === undefined) return '';
+    const raw = String(sem).trim();
+    // If already contains letters (e.g., '5th' or 'Fifth'), return as-is
+    if (/[^0-9]/.test(raw)) return raw;
+    const n = parseInt(raw, 10);
+    if (Number.isNaN(n)) return raw;
+    const k = n % 100;
+    if (k >= 11 && k <= 13) return `${n}th`;
+    switch (n % 10) {
+      case 1: return `${n}st`;
+      case 2: return `${n}nd`;
+      case 3: return `${n}rd`;
+      default: return `${n}th`;
+    }
+  };
+
   const ErrorModal = ({ isOpen, title, message, onClose }) => {
     if (!isOpen) return null;
 
@@ -245,6 +266,7 @@ function StudentDashboard() {
             <p><strong> Roll Number:</strong> {user?.rollNumber}</p>
             <p><strong> Class:</strong> {user?.class}</p>
             {user?.batch && <p><strong> Batch:</strong> {user?.batch}</p>}
+              {user?.semester && <p><strong> Semester:</strong> {formatSemester(user?.semester)}</p>}
             <p><strong> Email:</strong> {user?.email}</p>
             {user?.branch && <p><strong> Branch:</strong> {user?.branch}</p>}
           </div>
@@ -550,34 +572,61 @@ function StudentDashboard() {
             {passwordError && <div className="error" style={{ marginBottom: '10px' }}>{passwordError}</div>}
 
             <label>Old Password</label>
-            <input
-              type="password"
-              placeholder="Old Password"
-              value={oldPassword}
-              onChange={(e) => setOldPassword(e.target.value)}
-              className="form-input"
-              style={{ marginBottom: '10px' }}
-            />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
+              <input
+                type={showOldPassword ? 'text' : 'password'}
+                placeholder="Old Password"
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
+                className="form-input"
+                style={{ flex: 1 }}
+              />
+              <button type="button" className="btn btn-outline" onClick={() => setShowOldPassword(s => !s)} aria-label={showOldPassword ? 'Hide old password' : 'Show old password'} style={{ padding: '6px 10px', background: 'none', border: 'none' }}>
+                {showOldPassword ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3.11-11-7.5A11 11 0 0 1 6.06 6.06"/><path d="M1 1l22 22"/></svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                )}
+              </button>
+            </div>
 
             <label>New Password</label>
-            <input
-              type="password"
-              placeholder="New Password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="form-input"
-              style={{ marginBottom: '10px' }}
-            />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                placeholder="New Password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="form-input"
+                style={{ flex: 1 }}
+              />
+              <button type="button" className="btn btn-outline" onClick={() => setShowNewPassword(s => !s)} aria-label={showNewPassword ? 'Hide new password' : 'Show new password'} style={{ padding: '6px 10px', background: 'none', border: 'none' }}>
+                {showNewPassword ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3.11-11-7.5A11 11 0 0 1 6.06 6.06"/><path d="M1 1l22 22"/></svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                )}
+              </button>
+            </div>
 
             <label>Confirm New Password</label>
-            <input
-              type="password"
-              placeholder="Confirm New Password"
-              value={confirmNewPassword}
-              onChange={(e) => setConfirmNewPassword(e.target.value)}
-              className="form-input"
-              style={{ marginBottom: '20px' }}
-            />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                placeholder="Confirm New Password"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                className="form-input"
+                style={{ flex: 1 }}
+              />
+              <button type="button" className="btn btn-outline" onClick={() => setShowConfirmPassword(s => !s)} aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} style={{ padding: '6px 10px', background: 'none', border: 'none' }}>
+                {showConfirmPassword ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3.11-11-7.5A11 11 0 0 1 6.06 6.06"/><path d="M1 1l22 22"/></svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                )}
+              </button>
+            </div>
 
             <div className="flex-between">
               <button
