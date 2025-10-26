@@ -183,15 +183,94 @@ router.post('/exam/:examId/generate-set', authMiddleware, studentAuth, async (re
     const usageMap = {};
     usageData.forEach(d => usageMap[d.type] = d.usageCount || 0);
 
-    // Define possible random distributions with usage counts
-    const distributions = [
-      { easy: 3, medium: 0, hard: 0, desc: '3 Easy', usageCount: usageMap['3 Easy'] || 0 },
-      { easy: 1, medium: 1, hard: 0, desc: '1 Easy, 1 Medium', usageCount: usageMap['1 Easy, 1 Medium'] || 0 },
-      { easy: 0, medium: 0, hard: 1, desc: '1 Hard', usageCount: usageMap['1 Hard'] || 0 }
-    ];
+    // Define possible distributions based on exact conditions specified
+    const availableDistributions = [];
+
+    // 1. If easy > 3 and medium = 0 and hard = 0 then distribution is easy:3
+    if (easyCount > 3 && mediumCount === 0 && hardCount === 0) {
+      availableDistributions.push({ easy: 3, medium: 0, hard: 0, desc: '3 Easy', usageCount: usageMap['3 Easy'] || 0 });
+    }
+
+    // 2. If easy >=1 and medium >=1 and hard =0: then distribution is easy:1 and medium:1
+    if (easyCount >= 1 && mediumCount >= 1 && hardCount === 0) {
+      availableDistributions.push({ easy: 1, medium: 1, hard: 0, desc: '1 Easy, 1 Medium', usageCount: usageMap['1 Easy, 1 Medium'] || 0 });
+    }
+
+    // 3. If easy >3 and medium >=1 and hard=0: then the distribution is easy:3 and easy:1 medium:1
+    if (easyCount > 3 && mediumCount >= 1 && hardCount === 0) {
+      availableDistributions.push({ easy: 3, medium: 0, hard: 0, desc: '3 Easy', usageCount: usageMap['3 Easy'] || 0 });
+      availableDistributions.push({ easy: 1, medium: 1, hard: 0, desc: '1 Easy, 1 Medium', usageCount: usageMap['1 Easy, 1 Medium'] || 0 });
+    }
+
+    // 4. If easy = 0 and medium > 1 and hard > 1: then the distribution is hard:1
+    if (easyCount === 0 && mediumCount > 1 && hardCount > 1) {
+      availableDistributions.push({ easy: 0, medium: 0, hard: 1, desc: '1 Hard', usageCount: usageMap['1 Hard'] || 0 });
+    }
+
+    // 5. If easy >=3 and medium >=1 and hard >=1 then the distributions are easy:3,medium:1 and easy:1 and hard:1
+    if (easyCount >= 3 && mediumCount >= 1 && hardCount >= 1) {
+      availableDistributions.push({ easy: 3, medium: 1, hard: 0, desc: '3 Easy, 1 Medium', usageCount: usageMap['3 Easy, 1 Medium'] || 0 });
+      availableDistributions.push({ easy: 1, medium: 0, hard: 1, desc: '1 Easy, 1 Hard', usageCount: usageMap['1 Easy, 1 Hard'] || 0 });
+    }
+
+    // Fallback distributions for cases not covered above
+    // If at least 1 easy and 1 medium and 1 hard (but not covered by 5)
+    if (easyCount >= 1 && mediumCount >= 1 && hardCount >= 1 && !(easyCount >= 3 && mediumCount >= 1 && hardCount >= 1)) {
+      availableDistributions.push({ easy: 1, medium: 1, hard: 1, desc: '1 Easy, 1 Medium, 1 Hard', usageCount: usageMap['1 Easy, 1 Medium, 1 Hard'] || 0 });
+    }
+
+    // If at least 1 medium and 1 hard (but not covered by 4)
+    if (easyCount === 0 && mediumCount >= 1 && hardCount >= 1 && !(mediumCount > 1 && hardCount > 1)) {
+      availableDistributions.push({ easy: 0, medium: 1, hard: 1, desc: '1 Medium, 1 Hard', usageCount: usageMap['1 Medium, 1 Hard'] || 0 });
+    }
+
+    // If at least 1 hard (fallback)
+    if (hardCount >= 1 && availableDistributions.length === 0) {
+      availableDistributions.push({ easy: 0, medium: 0, hard: 1, desc: '1 Hard', usageCount: usageMap['1 Hard'] || 0 });
+    }
+
+    // If at least 2 easy and 1 medium (fallback)
+    if (easyCount >= 2 && mediumCount >= 1 && availableDistributions.length === 0) {
+      availableDistributions.push({ easy: 2, medium: 1, hard: 0, desc: '2 Easy, 1 Medium', usageCount: usageMap['2 Easy, 1 Medium'] || 0 });
+    }
+
+    // If at least 1 easy and 2 medium (fallback)
+    if (easyCount >= 1 && mediumCount >= 2 && availableDistributions.length === 0) {
+      availableDistributions.push({ easy: 1, medium: 2, hard: 0, desc: '1 Easy, 2 Medium', usageCount: usageMap['1 Easy, 2 Medium'] || 0 });
+    }
+
+    // If at least 2 medium (fallback)
+    if (mediumCount >= 2 && availableDistributions.length === 0) {
+      availableDistributions.push({ easy: 0, medium: 2, hard: 0, desc: '2 Medium', usageCount: usageMap['2 Medium'] || 0 });
+    }
+
+    // If at least 3 medium (fallback)
+    if (mediumCount >= 3 && availableDistributions.length === 0) {
+      availableDistributions.push({ easy: 0, medium: 3, hard: 0, desc: '3 Medium', usageCount: usageMap['3 Medium'] || 0 });
+    }
+
+    // If at least 2 easy (when no medium/hard, fallback)
+    if (easyCount >= 2 && mediumCount === 0 && hardCount === 0 && availableDistributions.length === 0) {
+      availableDistributions.push({ easy: 2, medium: 0, hard: 0, desc: '2 Easy', usageCount: usageMap['2 Easy'] || 0 });
+    }
+
+    // If at least 1 easy (when no medium/hard, fallback)
+    if (easyCount >= 1 && mediumCount === 0 && hardCount === 0 && availableDistributions.length === 0) {
+      availableDistributions.push({ easy: 1, medium: 0, hard: 0, desc: '1 Easy', usageCount: usageMap['1 Easy'] || 0 });
+    }
+
+    // If at least 1 medium (when no easy/hard, fallback)
+    if (easyCount === 0 && mediumCount >= 1 && hardCount === 0 && availableDistributions.length === 0) {
+      availableDistributions.push({ easy: 0, medium: 1, hard: 0, desc: '1 Medium', usageCount: usageMap['1 Medium'] || 0 });
+    }
+
+    // If no distributions available, return error
+    if (availableDistributions.length === 0) {
+      return res.status(400).json({ message: 'Not enough questions available to generate a valid set. Please ensure there are sufficient questions in the required levels.' });
+    }
 
     // Use weighted random selection for distributions
-    const selectedDistribution = weightedRandomDistribution(distributions);
+    const selectedDistribution = weightedRandomDistribution(availableDistributions);
 
     // Update usage count for selected distribution
     await DistributionUsage.updateOne(
@@ -200,9 +279,7 @@ router.post('/exam/:examId/generate-set', authMiddleware, studentAuth, async (re
       { upsert: true }
     );
 
-    if (!selectedDistribution) {
-      return res.status(400).json({ message: 'Not enough questions available to generate a valid set. Please ensure there are sufficient questions in the required levels.' });
-    }
+    // selectedDistribution is guaranteed to exist due to the check above
 
     const selectedQuestions = [];
 

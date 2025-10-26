@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../utils/api';
 import Papa from 'papaparse';
@@ -70,23 +70,22 @@ function AddQuestions() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [csvFile, setCsvFile] = useState(null);
   const [parsedQuestions, setParsedQuestions] = useState([]);
   const [bulkProcessing, setBulkProcessing] = useState(false);
   const fileInputRef = useRef(null);
 
-  useEffect(() => {
-    fetchQuestions();
-  }, []);
-
-  const fetchQuestions = async () => {
+  const fetchQuestions = useCallback(async () => {
     try {
       const response = await api.get(`/teacher/exam/${examId}/questions`);
       setQuestions(response.data.questions);
     } catch (error) {
       console.error('Error fetching questions:', error);
     }
-  };
+  }, [examId]);
+
+  useEffect(() => {
+    fetchQuestions();
+  }, [fetchQuestions]);
 
   const handleChange = (e) => {
     setFormData({
@@ -145,7 +144,7 @@ function AddQuestions() {
       setError('Please select a CSV file to parse');
       return;
     }
-    setCsvFile(fileToParse);
+    // File is handled via ref
     setBulkProcessing(true); setError(''); setParsedQuestions([]);
     const normalizeHeader = (h) => (h || '').toString().replace(/^\uFEFF/, '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -228,7 +227,7 @@ function AddQuestions() {
       await api.post(`/exam/${examId}/questions/bulk`, { questions: parsedQuestions });
       setSuccess('Questions uploaded successfully!');
       setParsedQuestions([]);
-      setCsvFile(null);
+      // File cleared via ref
       if (fileInputRef.current) fileInputRef.current.value = '';
       fetchQuestions();
       setTimeout(() => setSuccess(''), 3000);
@@ -320,9 +319,9 @@ function AddQuestions() {
             {bulkOpen && (
               <div style={{ marginTop: '20px', padding: '16px', border: '1px dashed #e2e8f0', borderRadius: '8px' }}>
                 <p style={{ marginTop: 0 }}><strong>Bulk upload format</strong>: <strong>questionText,level</strong></p>
-                <a href="#" onClick={handleDownloadTemplate}>Download CSV template</a>
+                <button type="button" onClick={handleDownloadTemplate} style={{ background: 'none', border: 'none', color: '#007bff', textDecoration: 'underline', cursor: 'pointer' }}>Download CSV template</button>
                 <div style={{ marginTop: '12px' }}>
-                  <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={(e) => setCsvFile(e.target.files[0] || null)} />
+                  <input ref={fileInputRef} type="file" accept=".csv,text/csv" />
                   <button type="button" className="btn btn-primary" style={{ marginLeft: '8px' }} disabled={bulkProcessing} onClick={handleParseCsv}>
                     {bulkProcessing ? 'Parsing...' : 'Parse CSV'}
                   </button>
@@ -363,7 +362,7 @@ function AddQuestions() {
                       <button type="button" className="btn btn-secondary" onClick={handleBulkSubmit} disabled={bulkProcessing}>
                         {bulkProcessing ? 'Processing...' : 'Upload Questions'}
                       </button>
-                      <button type="button" className="btn btn-outline" onClick={() => { setParsedQuestions([]); setCsvFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}>Clear</button>
+                      <button type="button" className="btn btn-outline" onClick={() => { setParsedQuestions([]); if (fileInputRef.current) fileInputRef.current.value = ''; }}>Clear</button>
                     </div>
                   </div>
                 )}

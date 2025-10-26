@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
@@ -17,25 +17,30 @@ function TakeExam() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [timeLeft, setTimeLeft] = useState(null);
 
-  useEffect(() => {
-    fetchExamDetails();
-    checkExamStatus();
-  }, []);
-
-  const fetchExamDetails = async () => {
+  const fetchExamDetails = useCallback(async () => {
     try {
       const response = await api.get(`/exam/${examId}`);
       setExam(response.data.exam);
     } catch (error) {
       console.error('Error fetching exam:', error);
     }
-  };
+  }, [examId]);
 
-  const checkExamStatus = async () => {
+  const fetchQuestions = useCallback(async () => {
+    try {
+      const response = await api.get(`/student/exam/${examId}/questions`);
+      setQuestions(response.data.questions);
+    } catch (error) {
+      console.error('Error fetching questions:', error);
+    }
+  }, [examId]);
+
+  const checkExamStatus = useCallback(async () => {
     try {
       const response = await api.get(`/student/exam/${examId}/status`);
-      
+
       if (response.data.setGenerated) {
         setSetGenerated(true);
         fetchQuestions();
@@ -45,16 +50,70 @@ function TakeExam() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [examId, fetchQuestions]);
 
-  const fetchQuestions = async () => {
+  // Calculate time left for exam
+  const calculateTimeLeft = useCallback(() => {
+    if (!exam || !exam.scheduledDate || !exam.scheduledTime || !exam.duration) return null;
+
     try {
-      const response = await api.get(`/student/exam/${examId}/questions`);
-      setQuestions(response.data.questions);
+      // Parse scheduledDate (assuming it's a Date object or ISO string)
+      const examDate = new Date(exam.scheduledDate);
+      if (isNaN(examDate.getTime())) {
+        console.error('Invalid exam date:', exam.scheduledDate);
+        return null;
+      }
+
+      // Parse scheduledTime (assuming format like "HH:MM")
+      const [hours, minutes] = exam.scheduledTime.split(':').map(Number);
+      if (isNaN(hours) || isNaN(minutes)) {
+        console.error('Invalid exam time:', exam.scheduledTime);
+        return null;
+      }
+
+      // Set the time on the date
+      examDate.setHours(hours, minutes, 0, 0);
+
+      const examEndTime = new Date(examDate.getTime() + exam.duration * 60000);
+      const now = new Date();
+
+      const timeDiff = examEndTime - now;
+      if (timeDiff <= 0) return { minutes: 0, seconds: 0 };
+
+      const minutesLeft = Math.floor(timeDiff / 60000);
+      const secondsLeft = Math.floor((timeDiff % 60000) / 1000);
+
+      return { minutes: minutesLeft, seconds: secondsLeft };
     } catch (error) {
-      console.error('Error fetching questions:', error);
+      console.error('Error calculating time left:', error);
+      return null;
     }
-  };
+  }, [exam]);
+
+  // Update time left every second
+  useEffect(() => {
+    if (!exam) return;
+
+    const timer = setInterval(() => {
+      const time = calculateTimeLeft();
+      setTimeLeft(time);
+
+      // Auto-submit if time is up
+      if (time && time.minutes === 0 && time.seconds === 0) {
+        // Auto-submit logic will be handled here
+        if (!submitting) {
+          handleSubmitExam();
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [exam, calculateTimeLeft, submitting]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    fetchExamDetails();
+    checkExamStatus();
+  }, [fetchExamDetails, checkExamStatus]);
 
   const handleGenerateSet = async () => {
     setError('');
@@ -172,6 +231,13 @@ function TakeExam() {
       <nav className="navbar">
         <h2 style={{ color: '#667eea' }}>{exam?.examName || 'Exam'}</h2>
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+          <button
+            onClick={() => navigate('/student/dashboard')}
+            className="btn btn-outline"
+            style={{ marginRight: '15px' }}
+          >
+            Back to Dashboard
+          </button>
           <span>{user?.name} ({user?.rollNumber})</span>
         </div>
       </nav>
@@ -179,13 +245,46 @@ function TakeExam() {
       <div className="container">
         {exam && (
           <div className="card">
-            <div style={{ background: '#f7fafc', padding: '20px', borderRadius: '8px' }}>
-              <h3>{exam.examName}</h3>
-              <p style={{ color: '#718096', marginTop: '10px' }}>
-                <strong>Class:</strong> {exam.branch}-{exam.section}<br />
-                <strong>Duration:</strong> {exam.duration} minutes<br />
-                <strong>Date:</strong> {new Date(exam.scheduledDate).toLocaleDateString()} at {exam.scheduledTime}
-              </p>
+            <div style={{
+              background: timeLeft && timeLeft.minutes < 5 ? '#fed7d7' : '#f7fafc',
+              padding: '20px',
+              borderRadius: '8px',
+              border: timeLeft && timeLeft.minutes < 5 ? '2px solid #e53e3e' : '1px solid #e2e8f0'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3>{exam.examName}</h3>
+                  <p style={{ color: '#718096', marginTop: '10px' }}>
+                    <strong>Class:</strong> {exam.branch}-{exam.section}<br />
+                    <strong>Duration:</strong> {exam.duration} minutes<br />
+                    <strong>Date:</strong> {new Date(exam.scheduledDate).toLocaleDateString()} at {exam.scheduledTime}
+                  </p>
+                </div>
+                {timeLeft && (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '15px',
+                    background: timeLeft.minutes < 5 ? '#e53e3e' : '#667eea',
+                    color: 'white',
+                    borderRadius: '8px',
+                    minWidth: '120px'
+                  }}>
+                    <div style={{ fontSize: '14px', marginBottom: '5px' }}>Time Left</div>
+                    <div style={{
+                      fontSize: '24px',
+                      fontWeight: 'bold',
+                      fontFamily: 'monospace'
+                    }}>
+                      {String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
+                    </div>
+                    {timeLeft.minutes < 5 && (
+                      <div style={{ fontSize: '12px', marginTop: '5px' }}>
+                        ⚠️ Running out of time!
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

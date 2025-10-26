@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react'; // <-- Added useRef
+import React, { useState, useEffect, useRef, useCallback } from 'react'; // <-- Added useRef
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+// import { useAuth } from '../context/AuthContext'; // Removed unused import
 import api from '../utils/api';
 import Papa from 'papaparse';
 
@@ -58,10 +58,8 @@ const styles = {
 // --- End Style Objects ---
 
 function CreateExam() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const selectedClass = location.state?.selectedClass || '';
   const selectedBatch = location.state?.selectedBatch || '';
 
   const [formData, setFormData] = useState({
@@ -90,12 +88,11 @@ function CreateExam() {
   const [bulkSuccess, setBulkSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [csvFile, setCsvFile] = useState(null);
   const [parsedQuestions, setParsedQuestions] = useState([]);
   const [bulkProcessing, setBulkProcessing] = useState(false);
   const fileInputRef = useRef(null);
 
-  const fetchSemesters = async (date) => {
+  const fetchSemesters = useCallback(async (date) => {
     if (date) {
       console.log('Fetching semesters for date:', date);
       try {
@@ -110,9 +107,9 @@ function CreateExam() {
         console.error('Error fetching semesters:', error);
       }
     }
-  };
+  }, []);
 
-  const fetchBranches = async (date, semester) => {
+  const fetchBranches = useCallback(async (date, semester) => {
     if (date && semester) {
       try {
         const response = await api.get(`/teacher/branches/${date}/${semester}`);
@@ -125,9 +122,9 @@ function CreateExam() {
         console.error('Error fetching branches:', error);
       }
     }
-  };
+  }, []);
 
-  const fetchSections = async (date, semester, branch) => {
+  const fetchSections = useCallback(async (date, semester, branch) => {
     if (date && semester && branch) {
       try {
         const response = await api.get(`/teacher/sections/${date}/${semester}/${branch}`);
@@ -140,9 +137,9 @@ function CreateExam() {
         console.error('Error fetching sections:', error);
       }
     }
-  };
+  }, []);
 
-  const fetchSubjects = async (date, semester, branch, section) => {
+  const fetchSubjects = useCallback(async (date, semester, branch, section) => {
     if (date && semester && branch && section) {
       try {
         const response = await api.get(`/teacher/subjects/${date}/${semester}/${branch}/${section}`);
@@ -155,11 +152,11 @@ function CreateExam() {
         console.error('Error fetching subjects:', error);
       }
     }
-  };
+  }, []);
 
   const isLabSubject = (subject) => subject && subject.toLowerCase().includes('lab');
 
-  const fetchBatch = async (date, semester, branch, section, subject) => {
+  const fetchBatch = useCallback(async (date, semester, branch, section, subject) => {
     if (date && semester && branch && section && subject && isLabSubject(subject)) {
       try {
         const response = await api.get(`/teacher/batch/${date}/${semester}/${branch}/${section}/${encodeURIComponent(subject)}`);
@@ -176,7 +173,7 @@ function CreateExam() {
     } else {
       setFormData(prev => ({ ...prev, batch: '' }));
     }
-  };
+  }, []);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -186,25 +183,25 @@ function CreateExam() {
     if (formData.scheduledDate) {
       fetchSemesters(formData.scheduledDate);
     }
-  }, [formData.scheduledDate]);
+  }, [formData.scheduledDate, fetchSemesters]);
 
   useEffect(() => {
     if (formData.scheduledDate && formData.semester) {
       fetchBranches(formData.scheduledDate, formData.semester);
     }
-  }, [formData.scheduledDate, formData.semester]);
+  }, [formData.scheduledDate, formData.semester, fetchBranches]);
 
   useEffect(() => {
     if (formData.scheduledDate && formData.semester && formData.branch) {
       fetchSections(formData.scheduledDate, formData.semester, formData.branch);
     }
-  }, [formData.scheduledDate, formData.semester, formData.branch]);
+  }, [formData.scheduledDate, formData.semester, formData.branch, fetchSections]);
 
   useEffect(() => {
     if (formData.scheduledDate && formData.semester && formData.branch && formData.section) {
       fetchSubjects(formData.scheduledDate, formData.semester, formData.branch, formData.section);
     }
-  }, [formData.scheduledDate, formData.semester, formData.branch, formData.section]);
+  }, [formData.scheduledDate, formData.semester, formData.branch, formData.section, fetchSubjects]);
 
   // Auto-select single options
   useEffect(() => {
@@ -213,12 +210,14 @@ function CreateExam() {
     }
   }, [examOptions.branches]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (formData.branch && examOptions.sections[formData.branch]?.length === 1 && !formData.section) {
       setFormData(prev => ({ ...prev, section: examOptions.sections[formData.branch][0] }));
     }
   }, [examOptions.sections, formData.branch]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (formData.branch && formData.section && examOptions.subjects[`${formData.branch}-${formData.section}`]?.length === 1 && !formData.subject) {
       setFormData(prev => ({ ...prev, subject: examOptions.subjects[`${formData.branch}-${formData.section}`][0] }));
@@ -229,7 +228,7 @@ function CreateExam() {
     if (formData.scheduledDate && formData.semester && formData.branch && formData.section && formData.subject) {
       fetchBatch(formData.scheduledDate, formData.semester, formData.branch, formData.section, formData.subject);
     }
-  }, [formData.scheduledDate, formData.semester, formData.branch, formData.section, formData.subject]);
+  }, [formData.scheduledDate, formData.semester, formData.branch, formData.section, formData.subject, fetchBatch]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -289,8 +288,23 @@ function CreateExam() {
     setError(''); setSuccess(''); setLoading(true);
 
     // Validate required fields
-    if (!formData.semester || !formData.subject) {
-      setError('Please select semester and subject before creating the exam.');
+    const requiredFields = [
+      { name: 'examName', label: 'Exam Name' },
+      { name: 'scheduledDate', label: 'Scheduled Date' },
+      { name: 'semester', label: 'Semester' },
+      { name: 'branch', label: 'Branch' },
+      { name: 'section', label: 'Section' },
+      { name: 'subject', label: 'Subject' },
+      { name: 'scheduledTime', label: 'Scheduled Time' },
+      { name: 'duration', label: 'Duration' },
+      { name: 'numberOfStudents', label: 'Number of Students' },
+    ];
+
+    const missingFields = requiredFields.filter(field => !formData[field.name] || formData[field.name].toString().trim() === '');
+
+    if (missingFields.length > 0) {
+      const fieldLabels = missingFields.map(field => field.label).join(', ');
+      setError(`Please fill in the following required fields: ${fieldLabels}.`);
       setLoading(false);
       return;
     }
@@ -332,8 +346,7 @@ function CreateExam() {
       setBulkError('Please select a CSV file to parse');
       return;
     }
-    // Sync the csvFile state with the selected file
-    setCsvFile(fileToParse);
+    // File handled via ref
     setBulkProcessing(true); setBulkError(''); setParsedQuestions([]);
     // More tolerant parsing: normalize headers, accept common header names, fallback to headerless CSV
     const normalizeHeader = (h) => (h || '').toString().replace(/^\uFEFF/, '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -417,8 +430,23 @@ function CreateExam() {
     setBulkProcessing(true); setBulkError(''); setBulkSuccess('');
 
     // Validate required fields
-    if (!formData.semester || !formData.subject) {
-      setBulkError('Please select semester and subject before creating the exam.');
+    const requiredFields = [
+      { name: 'examName', label: 'Exam Name' },
+      { name: 'scheduledDate', label: 'Scheduled Date' },
+      { name: 'semester', label: 'Semester' },
+      { name: 'branch', label: 'Branch' },
+      { name: 'section', label: 'Section' },
+      { name: 'subject', label: 'Subject' },
+      { name: 'scheduledTime', label: 'Scheduled Time' },
+      { name: 'duration', label: 'Duration' },
+      { name: 'numberOfStudents', label: 'Number of Students' },
+    ];
+
+    const missingFields = requiredFields.filter(field => !formData[field.name] || formData[field.name].toString().trim() === '');
+
+    if (missingFields.length > 0) {
+      const fieldLabels = missingFields.map(field => field.label).join(', ');
+      setBulkError(`Please fill in the following required fields: ${fieldLabels}.`);
       setBulkProcessing(false);
       return;
     }
@@ -556,9 +584,9 @@ function CreateExam() {
           {bulkOpen && (
             <div style={{ marginTop: '20px', padding: '16px', border: '1px dashed #e2e8f0', borderRadius: '8px' }}>
               <p style={{ marginTop: 0 }}><strong>Bulk upload format</strong>: <strong>questionText,level</strong></p>
-              <a href="#" onClick={handleDownloadTemplate}>Download CSV template</a>
+                <button type="button" onClick={handleDownloadTemplate} style={{ background: 'none', border: 'none', color: '#007bff', textDecoration: 'underline', cursor: 'pointer' }}>Download CSV template</button>
               <div style={{ marginTop: '12px' }}>
-                <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={(e) => setCsvFile(e.target.files[0] || null)} />
+                <input ref={fileInputRef} type="file" accept=".csv,text/csv" />
                 {/* Allow clicking Parse immediately; handler will fallback to the file input ref if state isn't updated yet */}
                 <button type="button" className="btn btn-primary" style={{ marginLeft: '8px' }} disabled={bulkProcessing} onClick={handleParseCsv}>
                   {bulkProcessing ? 'Parsing...' : 'Parse CSV'}
@@ -605,7 +633,7 @@ function CreateExam() {
                     <button type="button" className="btn btn-secondary" onClick={handleBulkSubmit} disabled={bulkProcessing}>
                       {bulkProcessing ? 'Processing...' : 'Create Exam & Upload Questions'}
                     </button>
-                    <button type="button" className="btn btn-outline" onClick={() => { setParsedQuestions([]); setCsvFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}>Clear</button>
+                    <button type="button" className="btn btn-outline" onClick={() => { setParsedQuestions([]); if (fileInputRef.current) fileInputRef.current.value = ''; }}>Clear</button>
                   </div>
                 </div>
               )}
