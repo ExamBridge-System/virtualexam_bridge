@@ -175,6 +175,40 @@ function SuperAdminDashboard() {
     }
   };
 
+  const handleDownloadTeacherTimetableFormat = () => {
+    const csvContent = `Day,Time,Subject,Branch,Section,Batches,Semester
+Monday,9:00 AM - 10:00 AM,Mathematics,IT,1,B1,3
+Monday,10:00 AM - 11:00 AM,Physics,CSE,2,B2,5
+Tuesday,11:00 AM - 12:00 PM,Chemistry,ECE,B1,C,7`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'teacher_timetable_sample.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDownloadStudentFormat = () => {
+    const csvContent = `Roll No.,Name,Batch
+12345,John Doe,2020-2024
+12346,Jane Smith,2021-2025
+12347,Alice Johnson,2022-2026`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'student_details_sample.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* Navbar */}
@@ -241,8 +275,16 @@ function SuperAdminDashboard() {
         {/* Upload Teacher Timetable CSV */}
         <div className="card">
           <h2>Upload Teacher Timetable CSV</h2>
-          <p>Upload a CSV file with teacher timetable data. Expected columns: day, time, subject, branch, section, batches, semester</p>
-          <form onSubmit={handleTeacherTimetableUpload}>
+          <p>Upload a CSV file with teacher timetable data. Expected columns: Day, Time, Subject, Branch, Section, Batches, Semester</p>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ marginBottom: '20px' }}
+            onClick={handleDownloadTeacherTimetableFormat}
+          >
+            Download Sample CSV Format
+          </button>
+          <form onSubmit={handleTeacherTimetableUpload} className="form">
             <div className="form-group">
               <label>Teacher ID</label>
               <input
@@ -279,6 +321,10 @@ function SuperAdminDashboard() {
                 <option value="ECE">ECE</option>
                 <option value="ME">ME</option>
                 <option value="CE">CE</option>
+                <option value="EE">EE</option>
+                <option value="CHE">CHE</option>
+                <option value="BIO">BIO</option>
+                <option value="AE">AE</option>
               </select>
             </div>
             <div className="form-group">
@@ -306,7 +352,15 @@ function SuperAdminDashboard() {
         <div className="card">
           <h2>Upload Student Details CSV</h2>
           <p>Upload a CSV file with student details. Expected columns: Roll No., Name, Batch</p>
-          <form onSubmit={handleStudentDetailsUpload}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ marginBottom: '20px' }}
+            onClick={handleDownloadStudentFormat}
+          >
+            Download Sample CSV Format
+          </button>
+          <form onSubmit={handleStudentDetailsUpload} className="form">
             <div className="form-group">
               <label>Branch</label>
               <select
@@ -321,6 +375,10 @@ function SuperAdminDashboard() {
                 <option value="ECE">ECE</option>
                 <option value="ME">ME</option>
                 <option value="CE">CE</option>
+                <option value="EE">EE</option>
+                <option value="CHE">CHE</option>
+                <option value="BIO">BIO</option>
+                <option value="AE">AE</option>
               </select>
             </div>
             <div className="form-group">
@@ -376,7 +434,7 @@ function SuperAdminDashboard() {
         {/* Add Single Student */}
         <div className="card">
           <h2>Add Single Student</h2>
-          <form onSubmit={handleAddStudent}>
+          <form onSubmit={handleAddStudent} className="form">
             <div className="form-group">
               <label>Name</label>
               <input
@@ -433,13 +491,22 @@ function SuperAdminDashboard() {
             </div>
             <div className="form-group">
               <label>Branch</label>
-              <input
-                type="text"
+              <select
                 name="branch"
                 value={studentForm.branch}
                 onChange={handleStudentFormChange}
-                placeholder="Enter branch"
-              />
+              >
+                <option value="">Select Branch</option>
+                <option value="IT">IT</option>
+                <option value="CSE">CSE</option>
+                <option value="ECE">ECE</option>
+                <option value="ME">ME</option>
+                <option value="CE">CE</option>
+                <option value="EE">EE</option>
+                <option value="CHE">CHE</option>
+                <option value="BIO">BIO</option>
+                <option value="AE">AE</option>
+              </select>
             </div>
             <div className="form-group">
               <label>Section</label>

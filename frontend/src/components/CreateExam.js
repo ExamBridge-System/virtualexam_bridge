@@ -86,6 +86,8 @@ function CreateExam() {
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [bulkError, setBulkError] = useState('');
+  const [bulkSuccess, setBulkSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
@@ -233,6 +235,12 @@ function CreateExam() {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
 
+    // Clear all error and success messages when form changes
+    setError('');
+    setSuccess('');
+    setBulkError('');
+    setBulkSuccess('');
+
     // Reset dependent fields
     if (name === 'scheduledDate') {
       setFormData(prev => ({ ...prev, semester: '', branch: '', section: '', subject: '', batch: '' }));
@@ -268,6 +276,14 @@ function CreateExam() {
     }
   }, [formData.batch, formData.branch, formData.section]);
 
+  // Clear all messages when formData changes (including auto-selections)
+  useEffect(() => {
+    setError('');
+    setSuccess('');
+    setBulkError('');
+    setBulkSuccess('');
+  }, [formData]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(''); setSuccess(''); setLoading(true);
@@ -291,7 +307,7 @@ function CreateExam() {
   };
 
   const handleDownloadTemplate = async (e) => {
-    e.preventDefault(); setError('');
+    e.preventDefault(); setBulkError('');
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/exam/questions/template', {
@@ -305,7 +321,7 @@ function CreateExam() {
       document.body.appendChild(a); a.click(); a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      setError(err.message || 'Failed to download template');
+      setBulkError(err.message || 'Failed to download template');
     }
   };
 
@@ -313,12 +329,12 @@ function CreateExam() {
     // Always use the file directly from the file input ref to ensure the latest selected file is used
     const fileToParse = fileInputRef.current?.files[0] || null;
     if (!fileToParse) {
-      setError('Please select a CSV file to parse');
+      setBulkError('Please select a CSV file to parse');
       return;
     }
     // Sync the csvFile state with the selected file
     setCsvFile(fileToParse);
-    setBulkProcessing(true); setError(''); setParsedQuestions([]);
+    setBulkProcessing(true); setBulkError(''); setParsedQuestions([]);
     // More tolerant parsing: normalize headers, accept common header names, fallback to headerless CSV
     const normalizeHeader = (h) => (h || '').toString().replace(/^\uFEFF/, '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -355,13 +371,13 @@ function CreateExam() {
                   .filter(r => r.questionText && r.questionText.trim() && !r.questionText.trim().startsWith('#'))
                   .map(r => ({ questionText: r.questionText.trim(), level: ['easy','medium','hard'].includes(r.level) ? r.level : 'easy' }));
                 if (parsed.length === 0) {
-                  setError('No valid questions found in the CSV. Make sure the file has a question column.');
+                  setBulkError('No valid questions found in the CSV. Make sure the file has a question column.');
                 }
                 setParsedQuestions(parsed);
                 setBulkProcessing(false);
               },
               error: (e) => {
-                setError('Failed to parse CSV (headerless fallback): ' + e.message);
+                setBulkError('Failed to parse CSV (headerless fallback): ' + e.message);
                 setBulkProcessing(false);
               }
             });
@@ -374,18 +390,18 @@ function CreateExam() {
             .filter(r => r.questionText && r.questionText.trim() && !r.questionText.trim().startsWith('#'));
 
           if (validQuestions.length === 0) {
-            setError('No valid questions found in the CSV. Ensure there is a question column (questionText, question, text) and optional level column (level, difficulty).');
+            setBulkError('No valid questions found in the CSV. Ensure there is a question column (questionText, question, text) and optional level column (level, difficulty).');
           }
 
           setParsedQuestions(validQuestions);
         } catch (err) {
-          setError('Failed to parse CSV: ' + (err.message || err));
+          setBulkError('Failed to parse CSV: ' + (err.message || err));
         } finally {
           setBulkProcessing(false);
         }
       },
       error: (err) => {
-        setError('Failed to parse CSV: ' + err.message);
+        setBulkError('Failed to parse CSV: ' + err.message);
         setBulkProcessing(false);
       },
     });
@@ -398,11 +414,11 @@ function CreateExam() {
   };
 
   const handleBulkSubmit = async () => {
-    setBulkProcessing(true); setError(''); setSuccess('');
+    setBulkProcessing(true); setBulkError(''); setBulkSuccess('');
 
     // Validate required fields
     if (!formData.semester || !formData.subject) {
-      setError('Please select semester and subject before creating the exam.');
+      setBulkError('Please select semester and subject before creating the exam.');
       setBulkProcessing(false);
       return;
     }
@@ -411,19 +427,19 @@ function CreateExam() {
       const response = await api.post('/exam/create', formData);
       const examId = response.data.exam._id;
       await api.post(`/exam/${examId}/questions/bulk`, { questions: parsedQuestions });
-      setSuccess('Exam and questions uploaded successfully!');
+      setBulkSuccess('Exam and questions uploaded successfully!');
       setTimeout(() => navigate(`/teacher/exam/${examId}/questions`), 1200);
     } catch (err) {
       console.error("BULK UPLOAD FAILED:", err);
       if (err.response) {
         console.error("Backend Response:", err.response.data);
-        setError(`Upload Failed: ${err.response.data.message || 'Check console for details.'}`);
+        setBulkError(`Upload Failed: ${err.response.data.message || 'Check console for details.'}`);
       } else if (err.request) {
         console.error("No response from server:", err.request);
-        setError('Upload failed: No response from the server.');
+        setBulkError('Upload failed: No response from the server.');
       } else {
         console.error('Error', err.message);
-        setError(`Upload failed: ${err.message}`);
+        setBulkError(`Upload failed: ${err.message}`);
       }
     } finally {
       setBulkProcessing(false);
@@ -443,7 +459,7 @@ function CreateExam() {
           <h2 style={{ marginBottom: '30px', textAlign: 'center' }}>Create Exam</h2>
           <form onSubmit={handleSubmit}>
             <fieldset disabled={bulkOpen}>
-              {/* Exam Form Groups - Reordered for logical flow */}
+              {/* Exam Form Groups - Arranged in side-by-side pairs in logical selection order */}
               <div className="form-group">
                 <label>Exam Name</label>
                 <input type="text" name="examName" value={formData.examName} onChange={handleChange} required placeholder="e.g., Mid-Term Exam" style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
@@ -452,16 +468,6 @@ function CreateExam() {
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Scheduled Date</label>
                   <input type="date" name="scheduledDate" value={formData.scheduledDate} onChange={handleChange} required style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
-                </div>
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label>Scheduled Time</label>
-                  <input type="time" name="scheduledTime" value={formData.scheduledTime} onChange={handleChange} required style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label>Duration (in minutes)</label>
-                  <input type="number" name="duration" value={formData.duration} onChange={handleChange} required min="1" placeholder="e.g., 60" style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Semester</label>
@@ -507,6 +513,16 @@ function CreateExam() {
                   <input type="text" name="batch" value={formData.batch} onChange={handleChange} placeholder="e.g., B1 (Auto-filled for LAB subjects)" style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
                 </div>
               </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Scheduled Time</label>
+                  <input type="time" name="scheduledTime" value={formData.scheduledTime} onChange={handleChange} required style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Duration (in minutes)</label>
+                  <input type="number" name="duration" value={formData.duration} onChange={handleChange} required min="1" placeholder="e.g., 60" style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
+                </div>
+              </div>
               <div className="form-group">
                 <label>Number of Students</label>
                 <input type="number" name="numberOfStudents" value={formData.numberOfStudents} onChange={handleChange} required min="1" placeholder="Enter number of students" style={{ padding: '10px', height: '40px', fontSize: '16px' }} />
@@ -525,13 +541,16 @@ function CreateExam() {
                 type="button"
                 className="btn btn-outline" // Keep this for base styling
                 style={ bulkOpen ? styles.cancelButtonStyle : styles.defaultOutlineButtonStyle }
-                onClick={() => { setBulkOpen(!bulkOpen); setParsedQuestions([]); setError(''); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                onClick={() => { setBulkOpen(!bulkOpen); setParsedQuestions([]); setBulkError(''); if (fileInputRef.current) fileInputRef.current.value = ''; }}
                 disabled={loading}
               >
                 {bulkOpen ? 'Cancel Bulk Upload' : 'Bulk Upload Questions'}
               </button>
             </div>
           </form>
+
+          {bulkOpen && bulkError && <div className="error">{bulkError}</div>}
+          {bulkOpen && bulkSuccess && <div className="success">{bulkSuccess}</div>}
 
           {/* Bulk Upload Section */}
           {bulkOpen && (

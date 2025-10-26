@@ -100,7 +100,7 @@ router.post('/upload-teacher-timetable', authMiddleware, upload.single('timetabl
 
         // Generate email and password for teacher
         const email = `${teacherId}@example.com`;
-        const hashedPassword = await bcrypt.hash('defaultpassword', 10); // Default password, can be changed later
+        const hashedPassword = await bcrypt.hash(teacherId, 10); // Default password is teacherId, can be changed later
 
         await Teacher.updateOne(
           { teacherId },
