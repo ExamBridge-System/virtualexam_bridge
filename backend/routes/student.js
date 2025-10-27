@@ -129,6 +129,9 @@ router.get('/exam/:examId/access', authMiddleware, studentAuth, async (req, res)
 
     // Use current date for schedule check, ensuring consistency
     const examDateTime = new Date(`${exam.scheduledDate.toISOString().split('T')[0]}T${exam.scheduledTime}`);
+    // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
+    // Server is 2.5 hours ahead, so shift exam time later by 2.5 hours
+    examDateTime.setTime(examDateTime.getTime() + 2.5 * 60 * 60 * 1000);
     const currentTime = new Date();
     const examEndTime = new Date(examDateTime.getTime() + exam.duration * 60000);
 

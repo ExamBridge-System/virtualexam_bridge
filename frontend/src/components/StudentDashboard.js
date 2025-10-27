@@ -168,12 +168,15 @@ Server Timestamp: ${response.data.serverTimestamp}`);
 
 
 
-  const isExamActive = (exam) => {
-    const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
-    const currentTime = new Date();
-    const examEndTime = new Date(examStartTime.getTime() + exam.duration * 60000);
-    return currentTime >= examStartTime && currentTime <= examEndTime;
-  };
+const isExamActive = (exam) => {
+  const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
+  // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
+  // Server is 2.5 hours ahead, so shift exam time later by 2.5 hours
+  examStartTime.setTime(examStartTime.getTime() + 2.5 * 60 * 60 * 1000);
+  const currentTime = new Date();
+  const examEndTime = new Date(examStartTime.getTime() + exam.duration * 60000);
+  return currentTime >= examStartTime && currentTime <= examEndTime;
+};
 
   // Format semester value to include ordinal suffix (e.g., 1 -> 1st, 2 -> 2nd, 3 -> 3rd, 11 -> 11th)
   const formatSemester = (sem) => {
