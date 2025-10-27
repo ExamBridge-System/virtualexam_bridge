@@ -7,15 +7,29 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
+
+const allowedOrigins = [
+  'http://localhost:3000', // Local React app
+  'https://virtualexam-bridge-frontend.onrender.com' // Render frontend
+];
+
+
 app.use(cors({
-  origin: 'http://localhost:3000', // Allow requests from React app
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps or curl)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
+
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -25,19 +39,19 @@ app.use((req, res, next) => {
     next();
   }
 });
+
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
-// Removed static serve for screenshots since they are now in Cloudinary
 
-// Database Connection
+
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/internal-test-system', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log('MongoDB Connected'))
-.catch(err => console.log('MongoDB Connection Error:', err));
+  .then(() => console.log('MongoDB Connected'))
+  .catch(err => console.log('MongoDB Connection Error:', err));
 
-// Routes
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/teacher', require('./routes/teacher'));
