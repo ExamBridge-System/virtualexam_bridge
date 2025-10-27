@@ -90,9 +90,9 @@ function ViewStudentSubmissions() {
           <div className="loading">Loading submissions...</div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: selectedSubmission ? '1fr 2fr' : '1fr', gap: '20px' }}>
-            <div className="card">
+            <div className="card" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
               <h3 style={{ marginBottom: '20px' }}>All Students</h3>
-              
+
               {submissions.length > 0 ? (
                 <div>
                   {submissions.map((submission) => (
@@ -142,7 +142,7 @@ function ViewStudentSubmissions() {
                         </span>
                       </div>
                       <p style={{ color: '#718096', fontSize: '13px', marginTop: '8px' }}>
-                        Screenshots: {submission.screenshots?.length || 0} | 
+                        Screenshots: {submission.screenshots?.length || 0} |
                         Questions: {submission.assignedQuestions?.length || 0}
                       </p>
                     </div>
@@ -156,7 +156,7 @@ function ViewStudentSubmissions() {
             </div>
 
             {selectedSubmission && (
-              <div className="card">
+              <div className="card" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <h3>Submission Details</h3>
                   <button

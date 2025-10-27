@@ -334,7 +334,7 @@ function AddQuestions() {
                     <h4>Preview & Set Difficulty ({parsedQuestions.length} questions)</h4>
                     {parsedQuestions.map((q, idx) => (
                       <div key={idx} style={{ padding: '8px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ flex: 1, fontWeight: 600 }}>{q.questionText}</div>
+                        <div style={{ flex: 1, fontWeight: 600 }} title={q.questionText}>{q.questionText}</div>
                         <div style={styles.difficultySelector}>
                           {[ 'easy', 'medium', 'hard' ].map((level, levelIdx) => (
                             <label
