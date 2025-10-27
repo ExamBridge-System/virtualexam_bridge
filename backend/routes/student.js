@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
 const cloudinary = require('cloudinary').v2;
+const moment = require('moment-timezone');
 const Exam = require('../models/Exam');
 const StudentExam = require('../models/StudentExam');
 const Question = require('../models/Question');
@@ -104,7 +105,14 @@ router.get('/exams', authMiddleware, studentAuth, async (req, res) => {
       ]
     }).sort({ scheduledDate: -1 });
 
-    res.json({ exams });
+    // Convert back from UTC → IST before sending
+    const examsIST = exams.map(exam => ({
+      ...exam.toObject(),
+      scheduledDate: moment(exam.scheduledDate).tz("Asia/Kolkata").format("YYYY-MM-DD"),
+      scheduledTime: moment(exam.scheduledDate).tz("Asia/Kolkata").format("HH:mm"),
+    }));
+
+    res.json({ exams: examsIST });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -127,41 +135,21 @@ router.get('/exam/:examId/access', authMiddleware, studentAuth, async (req, res)
       return res.status(403).json({ message: 'Not enrolled in this class or batch' });
     }
 
-    // Use current date for schedule check, ensuring consistency
-    const examDateTime = new Date(`${exam.scheduledDate.toISOString().split('T')[0]}T${exam.scheduledTime}`);
-    // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
-    // Server is 2.5 hours ahead, so subtract 2.5 hours to get IST
-    examDateTime.setTime(examDateTime.getTime() - 2.5 * 60 * 60 * 1000);
-    const currentTime = new Date();
-    const examEndTime = new Date(examDateTime.getTime() + exam.duration * 60000);
+    // Parse exam time as UTC (stored in UTC)
+    const examDateTimeUTC = moment.utc(exam.scheduledDate);
+    const examEndTimeUTC = examDateTimeUTC.clone().add(exam.duration, 'minutes');
 
-    // Also adjust current time to IST for consistent comparison
-    const currentTimeIST = new Date(currentTime.getTime() - 2.5 * 60 * 60 * 1000);
-    const canAccess = currentTimeIST >= examDateTime && currentTimeIST <= examEndTime;
+    // Current UTC time
+    const currentTimeUTC = moment.utc();
 
-    console.log('Exam Access Check:', {
-      examId,
-      examDateTime: examDateTime.toISOString(),
-      currentTime: currentTime.toISOString(),
-      currentTimeIST: currentTimeIST.toISOString(),
-      examEndTime: examEndTime.toISOString(),
-      canAccess,
-      serverTimestamp: currentTime.getTime()
-    });
+    const canAccess = currentTimeUTC.isBetween(examDateTimeUTC, examEndTimeUTC, null, '[]');
+    const examEnded = currentTimeUTC.isAfter(examEndTimeUTC);
 
-    // Check if exam has ended (exam end time in IST)
-    const examEnded = currentTimeIST > examEndTime;
-
-    res.json({
-      canAccess,
-      examEnded,
-      message: canAccess ? null : (examEnded ? 'Exam has ended.' : 'Exam is not currently available. Please check the scheduled time.'),
-      examDateTime: examDateTime.toISOString(),
-      currentTime: currentTime.toISOString(),
-      currentTimeIST: currentTimeIST.toISOString(),
-      examEndTime: examEndTime.toISOString(),
-      serverTimestamp: currentTime.getTime()
-    });
+    res.json({
+      canAccess,
+      examEnded,
+      message: canAccess ? null : (examEnded ? 'Exam has ended.' : 'Exam is not currently available. Please check the scheduled time.'),
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -645,5 +633,7 @@ router.post('/verify-email', authMiddleware, studentAuth, async (req, res) => {
     res.status(500).json({ message: 'Failed to verify email', error: error.message });
   }
 });
+
+
 
 module.exports = router;

@@ -1,5 +1,6 @@
 const express = require('express');
 const nodemailer = require('nodemailer');
+const moment = require('moment-timezone');
 const Exam = require('../models/Exam');
 const Question = require('../models/Question');
 const StudentExam = require('../models/StudentExam');
@@ -284,6 +285,10 @@ router.post('/exam/create', authMiddleware, teacherAuth, async (req, res) => {
   try {
     const { examName, semester, branch, section, subject, batch, numberOfStudents, scheduledDate, scheduledTime, duration } = req.body;
 
+    // Combine IST date & time and convert to UTC
+    const examDateTimeIST = moment.tz(`${scheduledDate} ${scheduledTime}`, "YYYY-MM-DD HH:mm", "Asia/Kolkata");
+    const examDateTimeUTC = examDateTimeIST.clone().utc();
+
     const exam = new Exam({
       examName,
       semester,
@@ -293,7 +298,7 @@ router.post('/exam/create', authMiddleware, teacherAuth, async (req, res) => {
       batch: batch || undefined,
       teacherId: req.user.id,
       numberOfStudents,
-      scheduledDate,
+      scheduledDate: examDateTimeUTC, // store in UTC
       scheduledTime,
       duration,
     });
@@ -348,7 +353,15 @@ router.get('/exam/:examId/questions', authMiddleware, teacherAuth, async (req, r
 router.get('/exams', authMiddleware, teacherAuth, async (req, res) => {
   try {
     const exams = await Exam.find({ teacherId: req.user.id }).sort({ createdAt: -1 });
-    res.json({ exams });
+
+    // Convert back from UTC → IST before sending
+    const examsIST = exams.map(exam => ({
+      ...exam.toObject(),
+      scheduledDate: moment(exam.scheduledDate).tz("Asia/Kolkata").format("YYYY-MM-DD"),
+      scheduledTime: moment(exam.scheduledDate).tz("Asia/Kolkata").format("HH:mm"),
+    }));
+
+    res.json({ exams: examsIST });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

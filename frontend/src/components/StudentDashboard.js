@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api, { studentAPI } from '../utils/api';
+import moment from 'moment-timezone';
 
 function StudentDashboard() {
   const { user, logout } = useAuth();
@@ -35,16 +36,22 @@ function StudentDashboard() {
     const interval = setInterval(() => {
       const newCountdowns = {};
       exams.forEach(exam => {
-        const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
-        // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
-        // Server is 2.5 hours ahead, so subtract 2.5 hours to get IST
-        examStartTime.setTime(examStartTime.getTime() - 2.5 * 60 * 60 * 1000);
-        const currentTime = new Date();
-        const timeDiff = examStartTime - currentTime;
+        // Parse exam time as IST (user input is in IST)
+        const examStartTimeIST = moment.tz(
+          `${exam.scheduledDate} ${exam.scheduledTime}`,
+          "YYYY-MM-DD HH:mm",
+          "Asia/Kolkata"
+        );
+
+        // Convert to UTC for consistent timing
+        const examStartTimeUTC = examStartTimeIST.clone().utc();
+        const currentTimeUTC = moment.utc();
+
+        const timeDiff = examStartTimeUTC.diff(currentTimeUTC);
 
         if (timeDiff > 0 && timeDiff <= 15 * 60 * 1000) { // Within 15 minutes
-          const minutes = Math.floor(timeDiff / (1000 * 60));
-          const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+          const minutes = Math.floor(moment.duration(timeDiff).asMinutes());
+          const seconds = Math.floor(moment.duration(timeDiff).seconds());
           newCountdowns[exam._id] = `${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
       });
@@ -172,13 +179,19 @@ Server Timestamp: ${response.data.serverTimestamp}`);
 
 
 const isExamActive = (exam) => {
-  const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
-  // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
-  // Server is 2.5 hours ahead, so subtract 2.5 hours to get IST
-  examStartTime.setTime(examStartTime.getTime() - 2.5 * 60 * 60 * 1000);
-  const currentTime = new Date();
-  const examEndTime = new Date(examStartTime.getTime() + exam.duration * 60000);
-  return currentTime >= examStartTime && currentTime <= examEndTime;
+  // Parse exam time as IST (user input is in IST)
+  const examStartTimeIST = moment.tz(
+    `${exam.scheduledDate} ${exam.scheduledTime}`,
+    "YYYY-MM-DD HH:mm",
+    "Asia/Kolkata"
+  );
+
+  // Convert to UTC for consistent timing
+  const examStartTimeUTC = examStartTimeIST.clone().utc();
+  const examEndTimeUTC = examStartTimeUTC.clone().add(exam.duration, 'minutes');
+  const currentTimeUTC = moment.utc();
+
+  return currentTimeUTC.isBetween(examStartTimeUTC, examEndTimeUTC, null, '[]');
 };
 
   // Format semester value to include ordinal suffix (e.g., 1 -> 1st, 2 -> 2nd, 3 -> 3rd, 11 -> 11th)
@@ -322,12 +335,18 @@ const isExamActive = (exam) => {
             ) : exams.filter(exam => isExamActive(exam)).length > 0 ? (
               <div className="grid">
                 {exams.filter(exam => isExamActive(exam)).map((exam) => {
-                  const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
-                  // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
-                  // Server is 2.5 hours ahead, so subtract 2.5 hours to get IST
-                  examStartTime.setTime(examStartTime.getTime() - 2.5 * 60 * 60 * 1000);
-                  const currentTime = new Date();
-                  const timeDiff = examStartTime - currentTime;
+                  // Parse exam time as IST (user input is in IST)
+                  const examStartTimeIST = moment.tz(
+                    `${exam.scheduledDate} ${exam.scheduledTime}`,
+                    "YYYY-MM-DD HH:mm",
+                    "Asia/Kolkata"
+                  );
+
+                  // Convert to UTC for consistent timing
+                  const examStartTimeUTC = examStartTimeIST.clone().utc();
+                  const currentTimeUTC = moment.utc();
+
+                  const timeDiff = examStartTimeUTC.diff(currentTimeUTC);
                   const isWithin15Min = timeDiff > 0 && timeDiff <= 15 * 60 * 1000;
                   const countdown = countdowns[exam._id];
 
@@ -388,25 +407,46 @@ const isExamActive = (exam) => {
             {loading ? (
               <div className="loading">⏳ Loading exams...</div>
             ) : exams.filter(exam => {
-              const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
-              // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
-              // Server is 2.5 hours ahead, so subtract 2.5 hours to get IST
-              examStartTime.setTime(examStartTime.getTime() - 2.5 * 60 * 60 * 1000);
-              const currentTime = new Date();
-              return examStartTime > currentTime && !isExamActive(exam);
+              // Parse exam time as IST (user input is in IST)
+              const examStartTimeIST = moment.tz(
+                `${exam.scheduledDate} ${exam.scheduledTime}`,
+                "YYYY-MM-DD HH:mm",
+                "Asia/Kolkata"
+              );
+
+              // Convert to UTC for consistent timing
+              const examStartTimeUTC = examStartTimeIST.clone().utc();
+              const currentTimeUTC = moment.utc();
+
+              return examStartTimeUTC.isAfter(currentTimeUTC) && !isExamActive(exam);
             }).length > 0 ? (
               <div className="grid">
                 {exams.filter(exam => {
-                  const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
-                  // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
-                  // Server is 2.5 hours ahead, so subtract 2.5 hours to get IST
-                  examStartTime.setTime(examStartTime.getTime() - 2.5 * 60 * 60 * 1000);
-                  const currentTime = new Date();
-                  return examStartTime > currentTime && !isExamActive(exam);
+                  // Parse exam time as IST (user input is in IST)
+                  const examStartTimeIST = moment.tz(
+                    `${exam.scheduledDate} ${exam.scheduledTime}`,
+                    "YYYY-MM-DD HH:mm",
+                    "Asia/Kolkata"
+                  );
+
+                  // Convert to UTC for consistent timing
+                  const examStartTimeUTC = examStartTimeIST.clone().utc();
+                  const currentTimeUTC = moment.utc();
+
+                  return examStartTimeUTC.isAfter(currentTimeUTC) && !isExamActive(exam);
                 }).map((exam) => {
-                  const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
-                  const currentTime = new Date();
-                  const timeDiff = examStartTime - currentTime;
+                  // Parse exam time as IST (user input is in IST)
+                  const examStartTimeIST = moment.tz(
+                    `${exam.scheduledDate} ${exam.scheduledTime}`,
+                    "YYYY-MM-DD HH:mm",
+                    "Asia/Kolkata"
+                  );
+
+                  // Convert to UTC for consistent timing
+                  const examStartTimeUTC = examStartTimeIST.clone().utc();
+                  const currentTimeUTC = moment.utc();
+
+                  const timeDiff = examStartTimeUTC.diff(currentTimeUTC);
                   const isWithin15Min = timeDiff > 0 && timeDiff <= 15 * 60 * 1000;
                   const countdown = countdowns[exam._id];
 

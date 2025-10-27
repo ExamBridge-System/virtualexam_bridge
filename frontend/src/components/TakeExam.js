@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
+import moment from 'moment-timezone';
 
 function TakeExam() {
   const { examId } = useParams();
@@ -57,37 +58,28 @@ function TakeExam() {
     if (!exam || !exam.scheduledDate || !exam.scheduledTime || !exam.duration) return null;
 
     try {
-      // Parse scheduledDate (assuming it's a Date object or ISO string)
-      const examDate = new Date(exam.scheduledDate);
-      if (isNaN(examDate.getTime())) {
-        console.error('Invalid exam date:', exam.scheduledDate);
-        return null;
-      }
+      // Combine date and time (IST assumed from user input)
+      const examDateTimeIST = moment.tz(
+        `${exam.scheduledDate} ${exam.scheduledTime}`,
+        "YYYY-MM-DD HH:mm",
+        "Asia/Kolkata"
+      );
 
-      // Parse scheduledTime (assuming format like "HH:MM")
-      const [hours, minutes] = exam.scheduledTime.split(':').map(Number);
-      if (isNaN(hours) || isNaN(minutes)) {
-        console.error('Invalid exam time:', exam.scheduledTime);
-        return null;
-      }
+      // Convert to UTC for consistent backend timing
+      const examDateTimeUTC = examDateTimeIST.clone().utc();
 
-      // Set the time on the date
-      examDate.setHours(hours, minutes, 0, 0);
+      // Calculate end time
+      const examEndTimeUTC = examDateTimeUTC.clone().add(exam.duration, 'minutes');
 
-      // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
-      // Server is 2.5 hours ahead, so subtract 2.5 hours to get IST
-      examDate.setTime(examDate.getTime() - 2.5 * 60 * 60 * 1000);
+      // Current UTC time
+      const nowUTC = moment.utc();
 
-      const examEndTime = new Date(examDate.getTime() + exam.duration * 60000);
-      const now = new Date();
-      // Adjust current time to IST for consistent comparison
-      const nowIST = new Date(now.getTime() - 2.5 * 60 * 60 * 1000);
+      const timeDiff = examEndTimeUTC.diff(nowUTC);
 
-      const timeDiff = examEndTime - nowIST;
       if (timeDiff <= 0) return { minutes: 0, seconds: 0 };
 
-      const minutesLeft = Math.floor(timeDiff / 60000);
-      const secondsLeft = Math.floor((timeDiff % 60000) / 1000);
+      const minutesLeft = Math.floor(moment.duration(timeDiff).asMinutes());
+      const secondsLeft = Math.floor(moment.duration(timeDiff).seconds());
 
       return { minutes: minutesLeft, seconds: secondsLeft };
     } catch (error) {
