@@ -109,7 +109,7 @@ router.get('/exams', authMiddleware, studentAuth, async (req, res) => {
     const examsIST = exams.map(exam => ({
       ...exam.toObject(),
       scheduledDate: moment(exam.scheduledDate).tz("Asia/Kolkata").format("YYYY-MM-DD"),
-      scheduledTime: moment(exam.scheduledDate).tz("Asia/Kolkata").format("HH:mm"),
+      scheduledTime: exam.scheduledTime, // already stored as IST string
     }));
 
     res.json({ exams: examsIST });
@@ -135,20 +135,31 @@ router.get('/exam/:examId/access', authMiddleware, studentAuth, async (req, res)
       return res.status(403).json({ message: 'Not enrolled in this class or batch' });
     }
 
-    // Parse exam time as UTC (stored in UTC)
-    const examDateTimeUTC = moment.utc(exam.scheduledDate);
-    const examEndTimeUTC = examDateTimeUTC.clone().add(exam.duration, 'minutes');
+    // Parse exam time as IST (user input is in IST)
+    const examStartTimeIST = moment.tz(
+      `${moment(exam.scheduledDate).tz("Asia/Kolkata").format("YYYY-MM-DD")} ${exam.scheduledTime}`,
+      "YYYY-MM-DD HH:mm",
+      "Asia/Kolkata"
+    );
+
+    // Convert to UTC for consistent timing
+    const examStartTimeUTC = examStartTimeIST.clone().utc();
+    const examEndTimeUTC = examStartTimeUTC.clone().add(exam.duration, 'minutes');
 
     // Current UTC time
     const currentTimeUTC = moment.utc();
 
-    const canAccess = currentTimeUTC.isBetween(examDateTimeUTC, examEndTimeUTC, null, '[]');
+    const canAccess = currentTimeUTC.isBetween(examStartTimeUTC, examEndTimeUTC, null, '[]');
     const examEnded = currentTimeUTC.isAfter(examEndTimeUTC);
 
     res.json({
       canAccess,
       examEnded,
       message: canAccess ? null : (examEnded ? 'Exam has ended.' : 'Exam is not currently available. Please check the scheduled time.'),
+      currentTime: currentTimeUTC.toISOString(),
+      examDateTime: examStartTimeUTC.toISOString(),
+      examEndTime: examEndTimeUTC.toISOString(),
+      serverTimestamp: Date.now(),
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });

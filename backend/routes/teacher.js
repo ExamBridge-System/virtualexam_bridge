@@ -30,6 +30,16 @@ router.get('/classes', authMiddleware, teacherAuth, async (req, res) => {
   }
 });
 
+// Welcome endpoint
+router.get('/welcome', authMiddleware, teacherAuth, async (req, res) => {
+  try {
+    console.log(`Request received: ${req.method} ${req.path}`);
+    res.json({ message: 'Welcome to the Virtual Exam Bridge!' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get semesters for a given date
 router.get('/semesters/:date', authMiddleware, teacherAuth, async (req, res) => {
   try {
@@ -358,7 +368,7 @@ router.get('/exams', authMiddleware, teacherAuth, async (req, res) => {
     const examsIST = exams.map(exam => ({
       ...exam.toObject(),
       scheduledDate: moment(exam.scheduledDate).tz("Asia/Kolkata").format("YYYY-MM-DD"),
-      scheduledTime: moment(exam.scheduledDate).tz("Asia/Kolkata").format("HH:mm"),
+      scheduledTime: exam.scheduledTime, // already stored as IST string
     }));
 
     res.json({ exams: examsIST });
