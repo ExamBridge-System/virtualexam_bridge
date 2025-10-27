@@ -74,6 +74,10 @@ function TakeExam() {
       // Set the time on the date
       examDate.setHours(hours, minutes, 0, 0);
 
+      // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
+      // Server is 2.5 hours ahead, so shift exam time later by 2.5 hours
+      examDate.setTime(examDate.getTime() + 2.5 * 60 * 60 * 1000);
+
       const examEndTime = new Date(examDate.getTime() + exam.duration * 60000);
       const now = new Date();
 
