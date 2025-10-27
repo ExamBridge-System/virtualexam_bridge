@@ -429,10 +429,10 @@ router.get('/exam/:examId/submissions/csv', authMiddleware, teacherAuth, async (
     submissions.forEach((s) => {
       const roll = s.studentId?.rollNumber || '';
       const name = s.studentId?.name || '';
-      // join assigned question texts using | as separator to keep it readable
+      // join assigned question texts using double newlines as separator for more space between questions
       const questions = (s.assignedQuestions || []).map(q => {
         return q.questionText || (q.questionId && q.questionId.questionText) || '';
-      }).join(' | ');
+      }).join('\n\n');
 
       // Prevent Excel from rendering long roll numbers in scientific notation by using a formula
       // that yields the text value: ="<roll>" (CSV encoding will escape quotes appropriately).

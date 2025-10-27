@@ -130,7 +130,6 @@ router.post('/upload-student-details', authMiddleware, upload.single('students')
   if (req.user.role !== 'admin') {
     return res.status(403).json({ message: 'Access denied' });
   }
-
   const { branch, section, semester } = req.body;
   if (!branch || !section || !semester) {
     return res.status(400).json({ message: 'Branch, section, and semester are required' });
@@ -223,68 +222,6 @@ router.post('/add-student', authMiddleware, async (req, res) => {
 
     await student.save();
     res.status(201).json({ message: 'Student added successfully' });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// Search teachers with filters
-router.get('/search-teachers', authMiddleware, async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Access denied' });
-  }
-
-  try {
-    const { department, teacherId, name } = req.query;
-
-    let query = {};
-
-    if (department) {
-      query.department = { $regex: department, $options: 'i' };
-    }
-    if (teacherId) {
-      query.teacherId = { $regex: teacherId, $options: 'i' };
-    }
-    if (name) {
-      query.name = { $regex: name, $options: 'i' };
-    }
-
-    const teachers = await Teacher.find(query).select('name email teacherId department branchSection createdAt');
-    res.json({ teachers });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// Search students with filters
-router.get('/search-students', authMiddleware, async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Access denied' });
-  }
-
-  try {
-    const { name, rollNumber, branch, section, semester } = req.query;
-
-    let query = {};
-
-    if (name) {
-      query.name = { $regex: name, $options: 'i' };
-    }
-    if (rollNumber) {
-      query.rollNumber = { $regex: rollNumber, $options: 'i' };
-    }
-    if (branch) {
-      query.branch = { $regex: branch, $options: 'i' };
-    }
-    if (section) {
-      query.section = { $regex: section, $options: 'i' };
-    }
-    if (semester) {
-      query.semester = { $regex: semester, $options: 'i' };
-    }
-
-    const students = await Student.find(query).select('name email rollNumber class batch branch section semester createdAt');
-    res.json({ students });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
