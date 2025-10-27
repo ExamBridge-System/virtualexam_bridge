@@ -84,8 +84,8 @@ function TeacherDashboard() {
         }
         startDate.setHours(startHour, startMinute, 0, 0);
         // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
-        // Server is 2.5 hours ahead, so shift exam time later by 2.5 hours
-        startDate.setTime(startDate.getTime() + 2.5 * 60 * 60 * 1000);
+        // Server is 2.5 hours ahead, so subtract 2.5 hours to get IST
+        startDate.setTime(startDate.getTime() - 2.5 * 60 * 60 * 1000);
         const durationMinutes = Number(exam.duration) || 0;
         const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
         if (now < startDate) return 'upcoming';
@@ -305,8 +305,8 @@ function TeacherDashboard() {
                         const startDate = new Date(exam.scheduledDate);
                         startDate.setHours(startHour, startMinute, 0, 0);
                         // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
-                        // Server is 2.5 hours ahead, so shift exam time later by 2.5 hours
-                        startDate.setTime(startDate.getTime() + 2.5 * 60 * 60 * 1000);
+                        // Server is 2.5 hours ahead, so subtract 2.5 hours to get IST
+                        startDate.setTime(startDate.getTime() - 2.5 * 60 * 60 * 1000);
                         // Calculate end time
                         const endDate = new Date(startDate.getTime() + (exam.duration || 0) * 60000);
                         // Format times as 12-hour with AM/PM

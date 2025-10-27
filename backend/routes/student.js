@@ -130,27 +130,35 @@ router.get('/exam/:examId/access', authMiddleware, studentAuth, async (req, res)
     // Use current date for schedule check, ensuring consistency
     const examDateTime = new Date(`${exam.scheduledDate.toISOString().split('T')[0]}T${exam.scheduledTime}`);
     // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
-    // Server is 2.5 hours ahead, so shift exam time later by 2.5 hours
-    examDateTime.setTime(examDateTime.getTime() + 2.5 * 60 * 60 * 1000);
+    // Server is 2.5 hours ahead, so subtract 2.5 hours to get IST
+    examDateTime.setTime(examDateTime.getTime() - 2.5 * 60 * 60 * 1000);
     const currentTime = new Date();
     const examEndTime = new Date(examDateTime.getTime() + exam.duration * 60000);
 
-    const canAccess = currentTime >= examDateTime && currentTime <= examEndTime;
+    // Also adjust current time to IST for consistent comparison
+    const currentTimeIST = new Date(currentTime.getTime() - 2.5 * 60 * 60 * 1000);
+    const canAccess = currentTimeIST >= examDateTime && currentTimeIST <= examEndTime;
 
     console.log('Exam Access Check:', {
       examId,
       examDateTime: examDateTime.toISOString(),
       currentTime: currentTime.toISOString(),
+      currentTimeIST: currentTimeIST.toISOString(),
       examEndTime: examEndTime.toISOString(),
       canAccess,
       serverTimestamp: currentTime.getTime()
     });
 
+    // Check if exam has ended (exam end time in IST)
+    const examEnded = currentTimeIST > examEndTime;
+
     res.json({
       canAccess,
-      message: canAccess ? null : 'Exam is not currently available. Please check the scheduled time.',
+      examEnded,
+      message: canAccess ? null : (examEnded ? 'Exam has ended.' : 'Exam is not currently available. Please check the scheduled time.'),
       examDateTime: examDateTime.toISOString(),
       currentTime: currentTime.toISOString(),
+      currentTimeIST: currentTimeIST.toISOString(),
       examEndTime: examEndTime.toISOString(),
       serverTimestamp: currentTime.getTime()
     });

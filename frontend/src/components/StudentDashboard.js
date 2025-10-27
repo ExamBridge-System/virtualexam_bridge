@@ -37,8 +37,8 @@ function StudentDashboard() {
       exams.forEach(exam => {
         const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
         // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
-        // Server is 2.5 hours ahead, so shift exam time later by 2.5 hours
-        examStartTime.setTime(examStartTime.getTime() + 2.5 * 60 * 60 * 1000);
+        // Server is 2.5 hours ahead, so subtract 2.5 hours to get IST
+        examStartTime.setTime(examStartTime.getTime() - 2.5 * 60 * 60 * 1000);
         const currentTime = new Date();
         const timeDiff = examStartTime - currentTime;
 
@@ -174,8 +174,8 @@ Server Timestamp: ${response.data.serverTimestamp}`);
 const isExamActive = (exam) => {
   const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
   // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
-  // Server is 2.5 hours ahead, so shift exam time later by 2.5 hours
-  examStartTime.setTime(examStartTime.getTime() + 2.5 * 60 * 60 * 1000);
+  // Server is 2.5 hours ahead, so subtract 2.5 hours to get IST
+  examStartTime.setTime(examStartTime.getTime() - 2.5 * 60 * 60 * 1000);
   const currentTime = new Date();
   const examEndTime = new Date(examStartTime.getTime() + exam.duration * 60000);
   return currentTime >= examStartTime && currentTime <= examEndTime;
@@ -323,6 +323,9 @@ const isExamActive = (exam) => {
               <div className="grid">
                 {exams.filter(exam => isExamActive(exam)).map((exam) => {
                   const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
+                  // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
+                  // Server is 2.5 hours ahead, so subtract 2.5 hours to get IST
+                  examStartTime.setTime(examStartTime.getTime() - 2.5 * 60 * 60 * 1000);
                   const currentTime = new Date();
                   const timeDiff = examStartTime - currentTime;
                   const isWithin15Min = timeDiff > 0 && timeDiff <= 15 * 60 * 1000;
@@ -387,8 +390,8 @@ const isExamActive = (exam) => {
             ) : exams.filter(exam => {
               const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
               // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
-              // Server is 2.5 hours ahead, so shift exam time later by 2.5 hours
-              examStartTime.setTime(examStartTime.getTime() + 2.5 * 60 * 60 * 1000);
+              // Server is 2.5 hours ahead, so subtract 2.5 hours to get IST
+              examStartTime.setTime(examStartTime.getTime() - 2.5 * 60 * 60 * 1000);
               const currentTime = new Date();
               return examStartTime > currentTime && !isExamActive(exam);
             }).length > 0 ? (
@@ -396,8 +399,8 @@ const isExamActive = (exam) => {
                 {exams.filter(exam => {
                   const examStartTime = new Date(`${new Date(exam.scheduledDate).toISOString().split('T')[0]}T${exam.scheduledTime}`);
                   // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
-                  // Server is 2.5 hours ahead, so shift exam time later by 2.5 hours
-                  examStartTime.setTime(examStartTime.getTime() + 2.5 * 60 * 60 * 1000);
+                  // Server is 2.5 hours ahead, so subtract 2.5 hours to get IST
+                  examStartTime.setTime(examStartTime.getTime() - 2.5 * 60 * 60 * 1000);
                   const currentTime = new Date();
                   return examStartTime > currentTime && !isExamActive(exam);
                 }).map((exam) => {

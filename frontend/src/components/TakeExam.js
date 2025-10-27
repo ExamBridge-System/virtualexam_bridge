@@ -75,13 +75,15 @@ function TakeExam() {
       examDate.setHours(hours, minutes, 0, 0);
 
       // Adjust for server in Singapore (SGT, UTC+8) and user likely in IST (UTC+5:30)
-      // Server is 2.5 hours ahead, so shift exam time later by 2.5 hours
-      examDate.setTime(examDate.getTime() + 2.5 * 60 * 60 * 1000);
+      // Server is 2.5 hours ahead, so subtract 2.5 hours to get IST
+      examDate.setTime(examDate.getTime() - 2.5 * 60 * 60 * 1000);
 
       const examEndTime = new Date(examDate.getTime() + exam.duration * 60000);
       const now = new Date();
+      // Adjust current time to IST for consistent comparison
+      const nowIST = new Date(now.getTime() - 2.5 * 60 * 60 * 1000);
 
-      const timeDiff = examEndTime - now;
+      const timeDiff = examEndTime - nowIST;
       if (timeDiff <= 0) return { minutes: 0, seconds: 0 };
 
       const minutesLeft = Math.floor(timeDiff / 60000);
@@ -106,6 +108,7 @@ function TakeExam() {
       if (time && time.minutes === 0 && time.seconds === 0) {
         // Auto-submit logic will be handled here
         if (!submitting) {
+          console.log('Time is up, auto-submitting exam');
           handleSubmitExam();
         }
       }
