@@ -227,4 +227,48 @@ router.post('/add-student', authMiddleware, async (req, res) => {
   }
 });
 
+// Search teachers
+router.get('/search-teachers', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Access denied' });
+  }
+
+  try {
+    const { department, teacherId, name } = req.query;
+    const query = {};
+
+    if (department) query.department = department;
+    if (teacherId) query.teacherId = teacherId;
+    if (name) query.name = { $regex: name, $options: 'i' }; // Case-insensitive search
+
+    const teachers = await Teacher.find(query).select('name email teacherId department branchSection');
+    res.json({ teachers });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Search students
+router.get('/search-students', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Access denied' });
+  }
+
+  try {
+    const { name, rollNumber, branch, section, semester } = req.query;
+    const query = {};
+
+    if (name) query.name = { $regex: name, $options: 'i' }; // Case-insensitive search
+    if (rollNumber) query.rollNumber = rollNumber;
+    if (branch) query.branch = branch;
+    if (section) query.section = section;
+    if (semester) query.semester = semester;
+
+    const students = await Student.find(query).select('name email rollNumber branch section semester');
+    res.json({ students });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 module.exports = router;

@@ -138,8 +138,20 @@ function StudentDashboard() {
 
         navigate(`/student/exam/${examId}`);
       } else {
+        const serverTime = new Date(response.data.currentTime);
+        const examStart = new Date(response.data.examDateTime);
+        const examEnd = new Date(response.data.examEndTime);
+        const localTime = new Date();
+
         setModalTitle('Access Denied');
-        setModalMessage(response.data.message || 'Exam is not currently available. Please check the scheduled time.');
+        setModalMessage(`${response.data.message || 'Exam is not currently available. Please check the scheduled time.'}
+
+Server Time: ${serverTime.toLocaleString()}
+Exam Start: ${examStart.toLocaleString()}
+Exam End: ${examEnd.toLocaleString()}
+Your Local Time: ${localTime.toLocaleString()}
+
+Server Timestamp: ${response.data.serverTimestamp}`);
         setIsModalOpen(true);
       }
     } catch (error) {

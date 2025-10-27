@@ -134,11 +134,22 @@ router.get('/exam/:examId/access', authMiddleware, studentAuth, async (req, res)
 
     const canAccess = currentTime >= examDateTime && currentTime <= examEndTime;
 
-    res.json({ 
-      canAccess, 
+    console.log('Exam Access Check:', {
+      examId,
       examDateTime: examDateTime.toISOString(),
       currentTime: currentTime.toISOString(),
-      examEndTime: examEndTime.toISOString()
+      examEndTime: examEndTime.toISOString(),
+      canAccess,
+      serverTimestamp: currentTime.getTime()
+    });
+
+    res.json({
+      canAccess,
+      message: canAccess ? null : 'Exam is not currently available. Please check the scheduled time.',
+      examDateTime: examDateTime.toISOString(),
+      currentTime: currentTime.toISOString(),
+      examEndTime: examEndTime.toISOString(),
+      serverTimestamp: currentTime.getTime()
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
