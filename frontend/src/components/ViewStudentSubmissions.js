@@ -11,6 +11,66 @@ function ViewStudentSubmissions() {
   const [exam, setExam] = useState(null);
   const [fullScreenImage, setFullScreenImage] = useState(null);
 
+  // Compute status from scheduledDate, scheduledTime and duration if available
+  const computeExamStatus = (exam) => {
+    try {
+      const now = new Date();
+      if (exam && exam.scheduledDate) {
+        const startDate = new Date(exam.scheduledDate);
+        let startHour = 0, startMinute = 0;
+        if (exam.scheduledTime) {
+          const parts = exam.scheduledTime.split(':').map(Number);
+          startHour = parts[0] || 0;
+          startMinute = parts[1] || 0;
+        }
+        startDate.setHours(startHour, startMinute, 0, 0);
+        // scheduledDate and scheduledTime are already in IST from backend
+        const durationMinutes = Number(exam.duration) || 0;
+        const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
+        if (now < startDate) return 'upcoming';
+        if (now >= startDate && now <= endDate) return 'active';
+        if (now > endDate) return 'completed';
+      }
+    } catch (e) {
+      // fallback to stored status
+      console.error('Error computing exam status', e);
+    }
+    return exam?.status || 'scheduled';
+  };
+
+  const getDisplayStatus = (submission, exam) => {
+    const examStatus = computeExamStatus(exam);
+    if (submission.status === 'submitted') return 'submitted';
+    if (examStatus === 'completed') return 'unsubmitted';
+    if (submission.status === 'inprogress') return 'in progress';
+    return submission.status.replace('_', ' ');
+  };
+
+  const getStatusStyle = (submission, exam) => {
+    const displayStatus = getDisplayStatus(submission, exam);
+    if (displayStatus === 'submitted') {
+      return {
+        background: '#d1fae5',
+        color: '#065f46'
+      };
+    } else if (displayStatus === 'unsubmitted') {
+      return {
+        background: '#fecaca',
+        color: '#991b1b'
+      };
+    } else if (displayStatus === 'in progress') {
+      return {
+        background: '#fef3c7',
+        color: '#92400e'
+      };
+    } else {
+      return {
+        background: '#e2e8f0',
+        color: '#2d3748'
+      };
+    }
+  };
+
   useEffect(() => {
     fetchSubmissions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -124,21 +184,10 @@ function ViewStudentSubmissions() {
                             padding: '4px 12px',
                             borderRadius: '12px',
                             fontSize: '12px',
-                            background:
-                              submission.status === 'submitted'
-                                ? '#d1fae5'
-                                : submission.status === 'in_progress'
-                                ? '#fef3c7'
-                                : '#e2e8f0',
-                            color:
-                              submission.status === 'submitted'
-                                ? '#065f46'
-                                : submission.status === 'in_progress'
-                                ? '#92400e'
-                                : '#2d3748',
+                            ...getStatusStyle(submission, exam)
                           }}
                         >
-                          {submission.status.replace('_', ' ')}
+                          {getDisplayStatus(submission, exam)}
                         </span>
                       </div>
                       <p style={{ color: '#718096', fontSize: '13px', marginTop: '8px' }}>

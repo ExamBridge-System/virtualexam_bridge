@@ -37,7 +37,42 @@ function TeacherDashboard() {
   const fetchExams = async () => {
     try {
       const response = await api.get('/teacher/exams');
-      setExams(response.data.exams);
+      const examsData = response.data.exams;
+
+      // Fetch submission stats for each exam
+      const examsWithStats = await Promise.all(
+        examsData.map(async (exam) => {
+          try {
+            const submissionsRes = await api.get(`/teacher/exam/${exam._id}/submissions`);
+            const submissions = submissionsRes.data.submissions;
+            const totalStudents = submissions.length;
+            const submittedCount = submissions.filter(s => s.status === 'submitted').length;
+            const inprogressCount = submissions.filter(s => s.status === 'inprogress').length;
+            const examStatus = computeExamStatus(exam);
+            const isCompleted = examStatus === 'completed';
+            const unsubmittedCount = isCompleted ? inprogressCount : totalStudents - submittedCount - inprogressCount;
+
+            return {
+              ...exam,
+              totalStudents,
+              submittedCount,
+              unsubmittedCount,
+              isCompleted
+            };
+          } catch (error) {
+            console.error(`Error fetching submissions for exam ${exam._id}:`, error);
+            return {
+              ...exam,
+              totalStudents: 0,
+              submittedCount: 0,
+              unsubmittedCount: 0,
+              isCompleted: false
+            };
+          }
+        })
+      );
+
+      setExams(examsWithStats);
     } catch (error) {
       console.error('Error fetching exams:', error);
     } finally {

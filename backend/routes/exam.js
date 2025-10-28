@@ -31,7 +31,7 @@ router.post('/create', authMiddleware, teacherAuth, async (req, res) => {
 // GET /api/exam/questions/template
 router.get('/questions/template', authMiddleware, teacherAuth, (req, res) => {
   try {
-    const columns = ["questionText", "level"];
+    const columns = ["questionText"];
     const stringifier = stringify({ header: true, columns: columns });
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="question_template.csv"');

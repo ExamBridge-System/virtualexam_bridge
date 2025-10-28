@@ -500,38 +500,53 @@ const isExamActive = (exam) => {
             <div style={{ marginBottom: '25px' }}>
               <h2>Completed Exams</h2>
               <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '5px' }}>
-                Exams you have submitted
+                Exams that have ended
               </p>
             </div>
 
             {loading ? (
               <div className="loading">⏳ Loading exams...</div>
-            ) : exams.filter(exam => examStatuses[exam._id]?.status === 'submitted').length > 0 ? (
+            ) : exams.filter(exam => exam.status === 'completed').length > 0 ? (
               <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
-                {exams.filter(exam => examStatuses[exam._id]?.status === 'submitted').map((exam) => (
-                  <div
-                    key={exam._id}
-                    style={{
-                      padding: '15px',
-                      marginBottom: '10px',
-                      border: '2px solid #10b981',
-                      borderRadius: '8px',
-                      background: '#f0fdf4',
-                      cursor: 'default',
-                    }}
-                  >
-                    <div className="flex-between" style={{ marginBottom: '10px' }}>
-                      <strong>{exam.examName}</strong>
-                      <span className="badge badge-success">Submitted</span>
+                {exams.filter(exam => exam.status === 'completed').map((exam) => {
+                  const studentStatus = examStatuses[exam._id]?.status;
+                  const isSubmitted = studentStatus === 'submitted';
+                  const isNotSubmitted = studentStatus === 'in_progress';
+
+                  return (
+                    <div
+                      key={exam._id}
+                      style={{
+                        padding: '15px',
+                        marginBottom: '10px',
+                        border: isSubmitted ? '2px solid #10b981' : '2px solid #f59e0b',
+                        borderRadius: '8px',
+                        background: isSubmitted ? '#f0fdf4' : '#fefce8',
+                        cursor: 'default',
+                      }}
+                    >
+                      <div className="flex-between" style={{ marginBottom: '10px' }}>
+                        <strong>{exam.examName}</strong>
+                        <span className={`badge ${isSubmitted ? 'badge-success' : 'badge-warning'}`}>
+                          {isSubmitted ? 'Submitted' : 'Not Submitted'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#718096' }}>
+                        <div>Class: {exam.class}</div>
+                        <div>Date: {new Date(exam.scheduledDate).toLocaleDateString()}</div>
+                        <div>Time: {exam.scheduledTime} ({exam.duration} min)</div>
+                        {isSubmitted && (
+                          <div>Screenshots: {Object.keys(examStatuses[exam._id]?.uploadedScreenshots || {}).length} questions</div>
+                        )}
+                        {isNotSubmitted && (
+                          <div style={{ color: '#d97706', fontWeight: 'bold' }}>
+                            Exam time completed - submission required
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '14px', color: '#718096' }}>
-                      <div>Class: {exam.class}</div>
-                      <div>Date: {new Date(exam.scheduledDate).toLocaleDateString()}</div>
-                      <div>Time: {exam.scheduledTime} ({exam.duration} min)</div>
-                      <div>Screenshots: {Object.keys(examStatuses[exam._id]?.uploadedScreenshots || {}).length} questions</div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div style={{
@@ -545,7 +560,7 @@ const isExamActive = (exam) => {
                   📭 No completed exams yet
                 </p>
                 <p style={{ fontSize: '14px', color: '#9ca3af', marginTop: '10px' }}>
-                  Complete exams to see them here
+                  Exams will appear here once their time has ended
                 </p>
               </div>
             )}
@@ -568,6 +583,7 @@ const isExamActive = (exam) => {
                   const status = examStatuses[exam._id]?.status || 'not_started';
                   const isActive = isExamActive(exam);
                   const isSubmitted = status === 'submitted';
+                  const isCompletedNotSubmitted = exam.status === 'completed' && status === 'in_progress';
 
                   return (
                     <div
@@ -585,8 +601,8 @@ const isExamActive = (exam) => {
                     >
                       <div className="flex-between" style={{ marginBottom: '10px' }}>
                         <strong>{exam.examName}</strong>
-                        <span className={`badge ${isActive ? 'badge-success' : isSubmitted ? 'badge-warning' : 'badge-secondary'}`}>
-                          {isSubmitted ? 'Submitted' : exam.status.replace('_', ' ')}
+                        <span className={`badge ${isActive ? 'badge-success' : isCompletedNotSubmitted ? 'badge-warning' : isSubmitted ? 'badge-warning' : 'badge-secondary'}`}>
+                          {isCompletedNotSubmitted ? "Didn't Submit" : isSubmitted ? 'Submitted' : exam.status.replace('_', ' ')}
                         </span>
                       </div>
                       <div style={{ fontSize: '14px', color: '#718096' }}>

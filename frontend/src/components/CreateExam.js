@@ -583,7 +583,7 @@ function CreateExam() {
           {/* Bulk Upload Section */}
           {bulkOpen && (
             <div style={{ marginTop: '20px', padding: '16px', border: '1px dashed #e2e8f0', borderRadius: '8px' }}>
-              <p style={{ marginTop: 0 }}><strong>Bulk upload format</strong>: <strong>questionText,level</strong></p>
+              <p style={{ marginTop: 0 }}><strong>Bulk upload format</strong>: <strong>questionText</strong></p>
                 <button type="button" onClick={handleDownloadTemplate} style={{ background: 'none', border: 'none', color: '#007bff', textDecoration: 'underline', cursor: 'pointer' }}>Download CSV template</button>
               <div style={{ marginTop: '12px' }}>
                 <input ref={fileInputRef} type="file" accept=".csv,text/csv" />
