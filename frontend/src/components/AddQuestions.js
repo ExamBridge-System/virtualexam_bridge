@@ -119,19 +119,23 @@ function AddQuestions() {
     return questions.filter(q => q.level === level).length;
   };
 
-  const handleDownloadTemplate = async (e) => {
+  const handleDownloadTemplate = (e) => {
     e.preventDefault(); setError('');
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/exam/questions/template', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error('Failed to download template');
-      const blob = await response.blob();
+      const csvContent = `questionText,level
+What is the capital of France?,easy
+Explain the concept of recursion in programming.,medium
+Design a database schema for an e-commerce platform.,hard
+
+`;
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = 'question_template.csv';
-      document.body.appendChild(a); a.click(); a.remove();
+      a.href = url;
+      a.download = 'question_template.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
       setError(err.message || 'Failed to download template');

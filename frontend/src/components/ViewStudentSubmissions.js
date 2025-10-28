@@ -42,7 +42,7 @@ function ViewStudentSubmissions() {
     const examStatus = computeExamStatus(exam);
     if (submission.status === 'submitted') return 'submitted';
     if (examStatus === 'completed') return 'unsubmitted';
-    if (submission.status === 'inprogress') return 'in progress';
+    if (submission.status === 'in_progress') return 'in progress';
     return submission.status.replace('_', ' ');
   };
 
